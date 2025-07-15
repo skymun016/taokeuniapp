@@ -1,0 +1,78 @@
+<?php
+
+namespace app\admin\controller;
+
+use think\exception\ValidateException;
+use app\model\ServiceTime;
+use app\model\ServiceTimeptype;
+
+class ServicetimeController extends Base
+{
+
+	function index()
+	{
+		$weid = weid();
+		$ptype = input('post.ptype', '', 'serach_in');
+		$ptype = str_ireplace('aaa', '', $ptype);
+
+		$query = ServiceTime::where(['weid' => $weid,'ptype' => (int) $ptype]);
+
+		$datalist = $query->order('sort asc,id asc')->select()->toArray();
+
+		$data['data'] = $datalist;
+		$data['ServiceTimeptype'] = ServiceTimeptype::getpcarray();
+		return $this->json($data);
+	}
+
+	function listUpdate()
+	{
+		$data = only('id,status,quantity,sort');
+		if (!$data['id']) throw new ValidateException('参数错误');
+		ServiceTime::update($data);
+
+		return $this->json(['msg' => '操作成功']);
+	}
+
+	public function update()
+	{
+		$id = $this->request->post('id');
+		$data = input('post.');
+		$data['ptype'] = (int) str_ireplace('aaa', '', $data['ptype']);
+		unset($data['create_time']);
+
+		if (empty($id)) {
+			$data['weid'] = weid();
+			try {
+				$res = ServiceTime::create($data);
+				if ($res->id && empty($data['sort'])) {
+					ServiceTime::update(['sort' => $res->id, 'id' => $res->id]);
+				}
+			} catch (\Exception $e) {
+				throw new ValidateException($e->getMessage());
+			}
+
+			return $this->json(['msg' => '添加成功', 'data' => $res->id]);
+		} else {
+			try {
+				ServiceTime::update($data);
+			} catch (\Exception $e) {
+				throw new ValidateException($e->getMessage());
+			}
+			return $this->json(['msg' => '修改成功']);
+		}
+	}
+
+	function getInfo()
+	{
+		$id =  $this->request->post('id', '', 'serach_in');
+		if (!$id) throw new ValidateException('参数错误');
+		$data = ServiceTime::field('*')->find($id)->toArray();
+
+		return $this->json(['data' => $data]);
+	}
+
+	function delete()
+	{
+		return $this->del(new ServiceTime());
+	}
+}
