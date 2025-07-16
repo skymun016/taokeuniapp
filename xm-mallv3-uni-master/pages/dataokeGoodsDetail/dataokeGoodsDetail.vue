@@ -342,7 +342,7 @@ export default {
 			if (couponInfo) {
 				fullText += `\n${couponInfo}`;
 			}
-			fullText += `\n点击复制按钮后打开淘宝APP直接购买`;
+			fullText += `\n点击复制按钮后\n打开淘宝APP直接购买`;
 
 			// 生成展示用淘口令文案（链接部分截断）
 			this.shareTaokoulingText = this.generateShortTaokoulingText(title, link, taokouling, couponInfo);
@@ -368,7 +368,7 @@ export default {
 			if (couponInfo) {
 				text += `\n${couponInfo}`;
 			}
-			text += `\n点击复制按钮后打开淘宝APP直接购买`;
+			text += `\n点击复制按钮后\n打开淘宝APP直接购买`;
 			return text;
 		},
 
