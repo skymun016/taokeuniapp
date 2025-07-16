@@ -221,7 +221,7 @@ export default {
 				const params = {
 					page: 1,
 					limit: this.pageSize,
-					showLoading: this.goodsList.length === 0
+					showLoading: false // 使用页面级加载动画，不使用API级加载动画
 				};
 				
 				// 调用API获取全部商品列表
@@ -283,7 +283,7 @@ export default {
 				const params = {
 					page: this.currentPage + 1,
 					limit: this.pageSize,
-					showLoading: false
+					showLoading: false // 加载更多时不显示API级加载动画
 				};
 				
 				// 调用API获取更多商品
@@ -323,8 +323,9 @@ export default {
 		 * 跳转到商品详情
 		 */
 		goToDetail(goods) {
+			console.log('跳转商品：', goods.id, goods);
 			uni.navigateTo({
-				url: `/pages/dataokeGoodsDetail/dataokeGoodsDetail?goods_id=${goods.goods_id}&id=${goods.id}`
+				url: `/pages/dataokeGoodsDetail/dataokeGoodsDetail?id=${goods.id}`
 			});
 		},
 		

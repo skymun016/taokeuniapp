@@ -65,32 +65,10 @@
 						<text class="tui-attr-label">平台</text>
 						<text class="tui-attr-value">{{ goodsInfo.shop_type == 1 ? '天猫' : '淘宝' }}</text>
 					</view>
-					<view class="tui-attr-item">
-						<text class="tui-attr-label">商品层级</text>
-						<text class="tui-attr-value" :style="{ color: getTierColor(goodsInfo.tier_level) }">
-							{{ getTierLabel(goodsInfo.tier_level) }}
-						</text>
-					</view>
 				</view>
 			</view>
 
-			<!-- 转链信息 -->
-			<view v-if="linkInfo" class="tui-link-section">
-				<view class="tui-section-title">
-					<tui-icon name="link" color="#e41f19"></tui-icon>
-					<text>转链信息</text>
-				</view>
-				<view class="tui-link-content">
-					<view class="tui-link-item">
-						<text class="tui-link-label">淘口令</text>
-						<text class="tui-link-value" @tap="copyText(linkInfo.tpwd)">{{ linkInfo.tpwd }}</text>
-					</view>
-					<view class="tui-link-item">
-						<text class="tui-link-label">优惠券链接</text>
-						<text class="tui-link-value" @tap="copyText(linkInfo.couponClickUrl)">点击复制</text>
-					</view>
-				</view>
-			</view>
+
 
 			<!-- 商品描述 -->
 			<view class="tui-goods-desc">
@@ -101,6 +79,10 @@
 				<view class="tui-desc-content">
 					<text>{{ goodsInfo.title }}</text>
 				</view>
+				<!-- 淘口令文案展示（带截断链接） -->
+				<view v-if="shareTaokoulingText" class="tui-desc-content" style="margin-top: 16rpx; color: #666; word-break: break-all;">
+					<text>{{ shareTaokoulingText }}</text>
+				</view>
 			</view>
 
 			<!-- 底部占位 -->
@@ -110,10 +92,7 @@
 		<!-- 底部操作栏 - 简化版 -->
 		<view class="tui-bottom-bar">
 			<view class="tui-bottom-center">
-				<view v-if="goodsInfo.link_status != 1" class="tui-btn tui-btn-convert" @tap="convertLink">
-					<text>领取优惠</text>
-				</view>
-				<view v-else class="tui-btn tui-btn-buy" @tap="buyNow">
+				<view class="tui-btn tui-btn-buy" @tap="handlePurchase">
 					<text>立即购买</text>
 				</view>
 			</view>
@@ -150,22 +129,17 @@ export default {
 			
 			// 页面参数
 			goodsId: '',
-			id: ''
+			id: '',
+			shareTaokoulingText: '', // 展示用淘口令文案（带截断链接）
 		}
 	},
 	
 	onLoad(options) {
-		console.log('页面参数:', options);
-		// 优先使用id，然后是goods_id，最后是goodsId
-		this.goodsId = options.id || options.goods_id || options.goodsId || '';
-		this.id = options.id || '';
-
+		console.log('详情页收到参数:', options);
+		this.goodsId = options.id || '';
+		this.id = this.goodsId;
 		console.log('解析后的goodsId:', this.goodsId);
-
-		// 获取系统信息
 		this.getSystemInfo();
-
-		// 加载商品详情
 		this.loadGoodsDetail();
 	},
 	
@@ -194,7 +168,7 @@ export default {
 		 * 加载商品详情
 		 */
 		async loadGoodsDetail() {
-			console.log('开始加载商品详情，goodsId:', this.goodsId);
+			console.log('请求商品详情，goodsId:', this.goodsId);
 
 			if (!this.goodsId || this.goodsId === 'undefined') {
 				console.error('商品ID无效:', this.goodsId);
@@ -212,16 +186,12 @@ export default {
 				const result = await dataokeApi.request.getGoodsList({
 					goods_id: this.goodsId,
 					limit: 1,
-					showLoading: true
+					showLoading: false // 使用页面级加载动画
 				});
+				console.log('API返回:', result);
 				
 				if (result.data.list && result.data.list.length > 0) {
 					this.goodsInfo = result.data.list[0];
-					
-					// 如果商品已转链，获取转链信息
-					if (this.goodsInfo.link_status == 1) {
-						this.getLinkInfo();
-					}
 				} else {
 					uni.showToast({
 						title: '商品不存在',
@@ -240,20 +210,18 @@ export default {
 			}
 		},
 		
-		/**
-		 * 获取转链信息
-		 */
-		async getLinkInfo() {
-			try {
-				const result = await dataokeApi.request.getConvertLink(this.goodsId);
-				if (result.data) {
-					this.linkInfo = result.data;
-				}
-			} catch (error) {
-				console.error('获取转链信息失败:', error);
-			}
-		},
+
 		
+		/**
+		 * 统一购买处理 - 自动判断是否需要转链
+		 */
+		async handlePurchase() {
+			if (this.loading) return;
+
+			// 无论什么情况都先转链，确保获取最新的转链信息
+			await this.convertLink();
+		},
+
 		/**
 		 * 转链 - 完善领取优惠功能
 		 */
@@ -274,9 +242,12 @@ export default {
 			this.loading = true;
 
 			try {
-				const result = await dataokeApi.request.getConvertLink(this.goodsId);
-				console.log('转链结果:', result);
-
+				const result = await dataokeApi.request.getConvertLink(this.goodsId, 'taobao', { showLoading: false });
+				// 打印完整响应数据
+				console.log('转链接口完整响应:', result);
+				if (result && result.data) {
+					console.log('转链接口 result.data:', JSON.stringify(result.data, null, 2));
+				}
 				if (result.data) {
 					this.linkInfo = result.data;
 					this.goodsInfo.link_status = 1;
@@ -288,18 +259,8 @@ export default {
 						tkl: result.data.tkl
 					});
 
-					// 显示转链成功信息，包含优惠券信息
-					let message = '转链成功！';
-					if (this.goodsInfo.coupon_price > 0) {
-						message += `\n优惠券：¥${this.goodsInfo.coupon_price}`;
-					}
-
-					uni.showModal({
-						title: '领取优惠成功',
-						content: message + '\n\n淘口令已生成，点击"立即购买"可复制淘口令到淘宝购买',
-						showCancel: false,
-						confirmText: '知道了'
-					});
+					// 转链成功后直接调用购买逻辑
+					this.buyNow();
 				} else {
 					uni.showToast({
 						title: '获取优惠失败',
@@ -321,8 +282,7 @@ export default {
 		 * 立即购买 - 生成完整淘口令并弹窗显示
 		 */
 		buyNow() {
-			console.log('buyNow - linkInfo:', this.linkInfo);
-
+			console.log('linkInfo:', JSON.stringify(this.linkInfo, null, 2));
 			if (this.linkInfo) {
 				// 尝试多个可能的淘口令字段名
 				const taokouling = this.linkInfo.tpwd || this.linkInfo.taokouling || this.linkInfo.tkl || '';
@@ -332,6 +292,7 @@ export default {
 				if (taokouling) {
 					// 生成完整的淘口令文案
 					const fullTaokouling = this.generateFullTaokouling(taokouling);
+					console.log('生成的淘口令文案:', fullTaokouling);
 
 					// 显示淘口令弹窗
 					this.showTaokoulingModal(fullTaokouling);
@@ -356,29 +317,59 @@ export default {
 		},
 
 		/**
-		 * 生成完整的淘口令文案
+		 * 生成完整的淘口令文案（淘宝标准格式）
 		 */
 		generateFullTaokouling(taokouling) {
 			const title = this.goodsInfo.title || '精选好物';
+			console.log('linkInfo:', this.linkInfo);
+			// 优先使用 shortUrl
+			const link = (this.linkInfo && (
+				this.linkInfo.shortUrl ||
+				this.linkInfo.privilege_link ||
+				this.linkInfo.couponClickUrl ||
+				this.linkInfo.item_url
+			)) || '';
 			const price = this.goodsInfo.actual_price || this.goodsInfo.original_price || '';
 			const couponInfo = this.goodsInfo.coupon_price > 0 ? `领券立减¥${this.goodsInfo.coupon_price}` : '';
 
-			// 构建完整淘口令
-			let fullText = `【淘宝】${title.substring(0, 30)}`;
-			if (title.length > 30) fullText += '...';
-
-			if (price) {
-				fullText += ` ¥${price}`;
+			let fullText = `【淘宝】${title}`;
+			if (link) {
+				fullText += ` ${link}`;
 			}
-
+			if (taokouling) {
+				fullText += ` ${taokouling}`;
+			}
 			if (couponInfo) {
-				fullText += ` ${couponInfo}`;
+				fullText += `\n${couponInfo}`;
 			}
+			fullText += `\n点击复制按钮后打开淘宝APP直接购买`;
 
-			fullText += ` ${taokouling}`;
-			fullText += '\n点击链接直接打开 或者 淘宝搜索直接打开';
+			// 生成展示用淘口令文案（链接部分截断）
+			this.shareTaokoulingText = this.generateShortTaokoulingText(title, link, taokouling, couponInfo);
 
+			console.log('生成的淘口令文案:', fullText);
 			return fullText;
+		},
+		/**
+		 * 生成展示用淘口令文案（链接部分截断）
+		 */
+		generateShortTaokoulingText(title, link, taokouling, couponInfo) {
+			let shortLink = link;
+			if (link && link.length > 30) {
+				shortLink = link.slice(0, 30) + '...';
+			}
+			let text = `【淘宝】${title}`;
+			if (shortLink) {
+				text += ` ${shortLink}`;
+			}
+			if (taokouling) {
+				text += ` ${taokouling}`;
+			}
+			if (couponInfo) {
+				text += `\n${couponInfo}`;
+			}
+			text += `\n点击复制按钮后打开淘宝APP直接购买`;
+			return text;
 		},
 
 		/**
@@ -488,21 +479,7 @@ export default {
 			return dataokeApi.utils.formatSaleCount(count);
 		},
 		
-		/**
-		 * 获取层级标签
-		 */
-		getTierLabel(level) {
-			const labels = { 1: '热门商品', 2: '普通商品', 3: '冷门商品' };
-			return labels[level] || '普通商品';
-		},
-		
-		/**
-		 * 获取层级颜色
-		 */
-		getTierColor(level) {
-			const colors = { 1: '#ff4757', 2: '#ffa502', 3: '#747d8c' };
-			return colors[level] || '#ffa502';
-		}
+
 	}
 }
 </script>
@@ -708,7 +685,7 @@ export default {
 }
 
 /* 区块样式 */
-.tui-link-section, .tui-goods-desc {
+.tui-goods-desc {
 	background: #fff;
 	margin: 0 20rpx 20rpx;
 	border-radius: 16rpx;
@@ -728,34 +705,7 @@ export default {
 	margin-left: 12rpx;
 }
 
-/* 转链信息样式 */
-.tui-link-content {
-	background: #f8f9fa;
-	border-radius: 12rpx;
-	padding: 24rpx;
-}
 
-.tui-link-item {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 20rpx;
-}
-
-.tui-link-item:last-child {
-	margin-bottom: 0;
-}
-
-.tui-link-label {
-	font-size: 26rpx;
-	color: #666;
-}
-
-.tui-link-value {
-	font-size: 26rpx;
-	color: #e41f19;
-	font-weight: bold;
-}
 
 /* 商品描述样式 */
 .tui-desc-content {

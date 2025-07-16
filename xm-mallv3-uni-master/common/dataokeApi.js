@@ -155,19 +155,21 @@ const dataokeRequest = {
      * 获取转链链接
      * @param {String} goodsId 商品ID
      * @param {String} platform 平台
+     * @param {Object} options 选项参数
      */
-    getConvertLink(goodsId, platform = 'taobao') {
+    getConvertLink(goodsId, platform = 'taobao', options = {}) {
         if (!goodsId) {
             return Promise.reject(new Error('商品ID不能为空'));
         }
-        
+
         return this.request({
             url: 'link.php',
             method: 'POST',
             data: {
                 goods_id: goodsId,
                 platform: platform
-            }
+            },
+            showLoading: options.showLoading !== false
         });
     },
     
@@ -254,8 +256,9 @@ const dataokeRequest = {
     /**
      * 转链接口
      * @param {string} goodsId 商品ID
+     * @param {Object} options 选项参数
      */
-    convertLink(goodsId) {
+    convertLink(goodsId, options = {}) {
         return this.request({
             url: 'miniapp_convert.php',
             method: 'POST',
@@ -263,7 +266,7 @@ const dataokeRequest = {
                 goods_id: goodsId,
                 platform: 'taobao'
             },
-            showLoading: true
+            showLoading: options.showLoading !== false
         });
     }
 };
