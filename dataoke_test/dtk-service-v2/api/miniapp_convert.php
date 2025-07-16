@@ -110,70 +110,57 @@ function handleConvert($goodsId, $params) {
         }
         
         // 如果没有有效链接，进行转链
-        if (!$hasValidLink) {
-            $logger->info('开始转链', ['goods_id' => $goodsId]);
-            
-            try {
-                $smartLinkService = new SmartLinkService();
-                $convertResult = $smartLinkService->convertSingleGoods($goodsId);
-                
-                if ($convertResult['success']) {
-                    // 更新商品转链信息
-                    $updateSql = "
-                        UPDATE dtk_goods 
-                        SET 
-                            privilege_link = ?,
-                            tpwd = ?,
-                            link_status = 1,
-                            last_convert_time = NOW(),
-                            convert_count = convert_count + 1,
-                            link_expire_time = DATE_ADD(NOW(), INTERVAL 7 DAY)
-                        WHERE goods_id = ?
-                    ";
-                    
-                    $updateStmt = $db->prepare($updateSql);
-                    $updateStmt->execute([
-                        $convertResult['privilege_link'],
-                        $convertResult['tpwd'],
-                        $goodsId
-                    ]);
-                    
-                    $privilegeLink = $convertResult['privilege_link'];
-                    $tpwd = $convertResult['tpwd'];
-                    
-                    $logger->info('转链成功', [
-                        'goods_id' => $goodsId,
-                        'has_privilege_link' => !empty($privilegeLink),
-                        'has_tpwd' => !empty($tpwd)
-                    ]);
-                } else {
-                    $logger->warning('转链失败', [
-                        'goods_id' => $goodsId,
-                        'error' => $convertResult['error'] ?? '未知错误'
-                    ]);
-                    
-                    // 转链失败，使用原始链接
-                    $privilegeLink = $goods['item_url'] ?? '';
-                    $tpwd = '';
-                }
-                
-            } catch (Exception $e) {
-                $logger->error('转链异常', [
-                    'goods_id' => $goodsId,
-                    'error' => $e->getMessage()
+        // 修改为：每次都强制转链，拿到最新短链并写入数据库
+        $logger->info('开始转链', ['goods_id' => $goodsId]);
+        try {
+            $smartLinkService = new SmartLinkService();
+            $convertResult = $smartLinkService->convertSingleGoods($goodsId);
+            $logger->info('大淘客API返回', ['goods_id' => $goodsId, 'convertResult' => $convertResult]);
+            $shortUrl = $convertResult['shortUrl'] ?? '';
+            $finalPrivilegeLink = $shortUrl ?: $convertResult['privilege_link'];
+            if ($convertResult['success']) {
+                // 强制更新商品转链信息
+                $updateSql = "
+                    UPDATE dtk_goods 
+                    SET 
+                        privilege_link = ?,
+                        tpwd = ?,
+                        link_status = 1,
+                        last_convert_time = NOW(),
+                        convert_count = convert_count + 1,
+                        link_expire_time = DATE_ADD(NOW(), INTERVAL 7 DAY)
+                    WHERE goods_id = ?
+                ";
+                $updateStmt = $db->prepare($updateSql);
+                $updateStmt->execute([
+                    $finalPrivilegeLink,
+                    $convertResult['tpwd'],
+                    $goodsId
                 ]);
-                
-                // 转链异常，使用原始链接
+                $privilegeLink = $finalPrivilegeLink;
+                $tpwd = $convertResult['tpwd'];
+            } else {
+                $logger->warning('转链失败', [
+                    'goods_id' => $goodsId,
+                    'error' => $convertResult['error'] ?? '未知错误'
+                ]);
                 $privilegeLink = $goods['item_url'] ?? '';
                 $tpwd = '';
+                $shortUrl = '';
             }
+        } catch (Exception $e) {
+            $logger->error('转链异常', [
+                'goods_id' => $goodsId,
+                'error' => $e->getMessage()
+            ]);
+            $privilegeLink = $goods['item_url'] ?? '';
+            $tpwd = '';
+            $shortUrl = '';
         }
-        
         // 记录转链统计
         recordConvertStats($goodsId, !empty($privilegeLink));
-        
         // 返回转链结果
-        Helper::jsonResponse(200, '转链成功', [
+        $responseData = [
             'goods_id' => $goodsId,
             'title' => $goods['title'],
             'image' => $goods['image'],
@@ -183,13 +170,16 @@ function handleConvert($goodsId, $params) {
             'final_price' => calculateFinalPrice($goods['price'], $goods['coupon_amount']),
             'shop_name' => $goods['shop_name'],
             'privilege_link' => $privilegeLink,
+            'shortUrl' => $shortUrl ?? '', // 只用大淘客API的最新值
             'tpwd' => $tpwd,
             'item_url' => $goods['item_url'] ?? '',
             'has_privilege' => !empty($privilegeLink),
             'has_tpwd' => !empty($tpwd),
             'convert_time' => date('Y-m-d H:i:s'),
             'expire_time' => date('Y-m-d H:i:s', strtotime('+7 days'))
-        ]);
+        ];
+        $logger->info('接口最终响应', ['goods_id' => $goodsId, 'responseData' => $responseData]);
+        Helper::jsonResponse(200, '转链成功', $responseData);
         
     } catch (Exception $e) {
         $logger->error('转链失败', [

@@ -40,22 +40,26 @@ try {
     
     // 执行转链
     $result = $linkService->convertSingleGoods($goodsId);
-    
-    if ($result) {
-        $logger->info('转链成功', [
-            'goods_id' => $goodsId,
-            'platform' => $platform
-        ]);
-        
-        successResponse($result, '转链成功');
-    } else {
-        $logger->warning('转链失败', [
-            'goods_id' => $goodsId,
-            'platform' => $platform
-        ]);
-        
-        errorResponse('转链失败，请稍后重试', 500);
+    $shortUrl = $result['shortUrl'] ?? '';
+    $finalPrivilegeLink = $shortUrl ?: ($result['privilegeLink'] ?? $result['privilege_link'] ?? '');
+    $tpwd = $result['tpwd'] ?? '';
+    // 强制更新数据库
+    try {
+        $db = \Services\DatabaseService::getInstance()->getConnection();
+        $updateSql = "UPDATE dtk_goods SET privilege_link = ?, tpwd = ?, link_status = 1, last_convert_time = NOW(), convert_count = convert_count + 1, link_expire_time = DATE_ADD(NOW(), INTERVAL 7 DAY) WHERE goods_id = ?";
+        $updateStmt = $db->prepare($updateSql);
+        $updateStmt->execute([$finalPrivilegeLink, $tpwd, $goodsId]);
+    } catch (Exception $e) {
+        $logger->error('转链数据库更新失败', ['goods_id' => $goodsId, 'error' => $e->getMessage()]);
     }
+    // 保证 shortUrl 字段一定返回，并兼容 privilegeLink/privilege_link
+    $response = $result;
+    $response['shortUrl'] = $shortUrl; // 只用大淘客API的最新值
+    $response['privilegeLink'] = $finalPrivilegeLink;
+    $response['privilege_link'] = $finalPrivilegeLink;
+    $response['tpwd'] = $tpwd;
+    $logger->info('接口最终响应', ['goods_id' => $goodsId, 'response' => $response]);
+    successResponse($response, '转链成功');
     
 } catch (Exception $e) {
     $logger->error('转链API异常', [

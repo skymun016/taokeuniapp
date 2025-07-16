@@ -68,6 +68,13 @@ function handleGoodsList($params) {
         // 构建SQL查询
         $where = ['platform = ?'];
         $whereParams = [$platform];
+
+        // 支持通过goods_id精确查找
+        if (!empty($params['goods_id'])) {
+            $where[] = 'goods_id = ?';
+            $whereParams[] = $params['goods_id'];
+            $limit = 1;
+        }
         
         // 关键词搜索
         if (!empty($keyword)) {

@@ -341,8 +341,9 @@ class SmartLinkService
         // 保存转链结果到数据库
         $expireTime = date('Y-m-d H:i:s', time() + 24 * 3600); // 24小时后过期
         
-        $sql = "UPDATE dtk_goods SET 
+        $sql = "UPDATE dtk_goods SET
                 privilege_link = ?,
+                short_url = ?,
                 coupon_click_url = ?,
                 tpwd = ?,
                 link_expire_time = ?,
@@ -350,9 +351,10 @@ class SmartLinkService
                 last_convert_time = NOW(),
                 convert_count = convert_count + 1
                 WHERE goods_id = ? AND platform = ?";
-        
+
         $this->db->execute($sql, [
             $linkResult['itemUrl'] ?? '',
+            $linkResult['shortUrl'] ?? '',
             $linkResult['couponClickUrl'] ?? '',
             $linkResult['tpwd'] ?? '',
             $expireTime,
@@ -407,11 +409,14 @@ class SmartLinkService
             'commissionRate' => $goods['commission_rate'],
             'estimatedCommission' => $goods['estimated_commission'],
             'privilegeLink' => $goods['privilege_link'],
+            'shortUrl' => $goods['short_url'],
             'couponClickUrl' => $goods['coupon_click_url'],
             'tpwd' => $goods['tpwd'],
             'tierLevel' => $goods['tier_level'],
             'linkStatus' => $goods['link_status'],
-            'linkExpireTime' => $goods['link_expire_time']
+            'linkExpireTime' => $goods['link_expire_time'],
+            // 兼容字段
+            'privilege_link' => $goods['privilege_link']
         ];
     }
     
@@ -434,12 +439,15 @@ class SmartLinkService
             'commissionRate' => $goods['commission_rate'],
             'estimatedCommission' => $goods['estimated_commission'],
             'privilegeLink' => $goods['item_link'], // 使用原始链接
+            'shortUrl' => '', // 降级时没有短链接
             'couponClickUrl' => $goods['coupon_link'],
             'tpwd' => '',
             'tierLevel' => $goods['tier_level'],
             'linkStatus' => self::LINK_STATUS_NONE,
             'linkExpireTime' => null,
-            'fallback' => true
+            'fallback' => true,
+            // 兼容字段
+            'privilege_link' => $goods['item_link']
         ];
     }
     

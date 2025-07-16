@@ -138,6 +138,10 @@ function handlePrivilegeLink()
         }
 
         $result = $linkConvertService->convertToPrivilegeLink($params);
+        $logger->info('大淘客API返回', ['goodsId' => $goodsId, 'result' => $result]);
+        
+        // 优先使用 shortUrl 作为 privilege_link
+        $finalPrivilegeLink = !empty($result['shortUrl']) ? $result['shortUrl'] : ($result['privilege_link'] ?? $result['itemUrl'] ?? '');
         
         // 格式化返回数据
         $responseData = [
@@ -153,12 +157,34 @@ function handlePrivilegeLink()
             'itemUrl' => $result['itemUrl'] ?? '',
             'couponClickUrl' => $result['couponClickUrl'] ?? '',
             'shortUrl' => $result['shortUrl'] ?? '',
+            'privilege_link' => $finalPrivilegeLink,
             'tpwd' => $result['tpwd'] ?? '',
             'hasCoupon' => $result['hasCoupon'] ?? false,
             'estimatedCommission' => $result['estimatedCommission'] ?? null,
             'convertTime' => $result['convertTime'] ?? date('Y-m-d H:i:s')
         ];
         
+        // 在每个 handleXXX 方法中，API调用后加如下逻辑：
+        if (isset($result['goodsId']) && (!empty($result['shortUrl']) || !empty($result['privilege_link']) || !empty($result['privilegeLink']))) {
+            $shortUrl = $result['shortUrl'] ?? '';
+            $finalPrivilegeLink = $shortUrl ?: ($result['privilege_link'] ?? $result['privilegeLink'] ?? $result['itemUrl'] ?? '');
+            $tpwd = $result['tpwd'] ?? '';
+            try {
+                $db = \Services\DatabaseService::getInstance()->getConnection();
+                $updateSql = "UPDATE dtk_goods SET privilege_link = ?, tpwd = ?, link_status = 1, last_convert_time = NOW(), convert_count = convert_count + 1, link_expire_time = DATE_ADD(NOW(), INTERVAL 7 DAY) WHERE goods_id = ?";
+                $updateStmt = $db->prepare($updateSql);
+                $updateStmt->execute([$finalPrivilegeLink, $tpwd, $result['goodsId']]);
+            } catch (Exception $e) {
+                $logger->error('转链数据库更新失败', ['goods_id' => $result['goodsId'], 'error' => $e->getMessage()]);
+            }
+            // 保证响应结构
+            $result['shortUrl'] = $shortUrl; // 只用大淘客API的最新值
+            $result['privilege_link'] = $finalPrivilegeLink;
+            $result['privilegeLink'] = $finalPrivilegeLink;
+            $result['tpwd'] = $tpwd;
+            $logger->info('接口最终响应', ['goods_id' => $result['goodsId'], 'result' => $result]);
+        }
+
         apiResponse($responseData, '转链成功', 200);
         
     } catch (\Exception $e) {
