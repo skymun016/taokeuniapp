@@ -1,0 +1,54 @@
+{
+    "name": "dtk/service-v2",
+    "description": "大淘客服务端 V2.0 - 基于官方SDK的多平台商品数据管理系统",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "DTK Team",
+            "email": "dev@dtk.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "ext-pdo": "*",
+        "ext-json": "*",
+        "ext-curl": "*",
+        "ext-mbstring": "*",
+        "dtk-developer/openapi-sdk-php": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Services\\": "src/Services/",
+            "Models\\": "src/Models/",
+            "Utils\\": "src/Utils/"
+        },
+        "files": [
+            "config/config.php",
+            "config/database.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "@php -r \"if (!file_exists('.env')) { copy('.env.example', '.env'); }\""
+        ],
+        "test": "phpunit",
+        "sync-goods": "@php cron/sync_goods.php",
+        "sync-categories": "@php cron/sync_categories.php",
+        "clear-cache": "@php -r \"require 'vendor/autoload.php'; (new \\Services\\CacheService())->clear();\""
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

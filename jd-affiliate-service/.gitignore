@@ -1,0 +1,34 @@
+# 环境变量文件
+.env
+
+# Composer
+/vendor/
+composer.lock
+
+# 缓存文件
+/cache/*
+!/cache/.gitkeep
+
+# 日志文件
+/logs/*
+!/logs/.gitkeep
+
+# IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+
+# 测试覆盖率报告
+/coverage/
+
+# PHPUnit结果缓存
+.phpunit.result.cache

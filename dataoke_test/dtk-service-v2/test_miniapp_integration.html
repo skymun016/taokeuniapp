@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小程序API集成测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 8px 16px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🧪 小程序API集成测试</h1>
+    
+    <div class="test-section">
+        <h2>📊 统计信息API测试</h2>
+        <button onclick="testStatsAPI()">测试统计API</button>
+        <div id="stats-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📦 商品列表API测试</h2>
+        <button onclick="testGoodsAPI()">测试商品列表</button>
+        <button onclick="testHotGoods()">测试热门商品</button>
+        <button onclick="testCouponGoods()">测试优惠券商品</button>
+        <div id="goods-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔍 搜索功能测试</h2>
+        <input type="text" id="search-keyword" placeholder="输入搜索关键词" value="面包">
+        <button onclick="testSearch()">搜索商品</button>
+        <div id="search-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://dtkv2.zhishujiaoyu.com/api/';
+        
+        async function apiRequest(url) {
+            try {
+                const response = await fetch(API_BASE + url);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                return { error: error.message };
+            }
+        }
+        
+        async function testStatsAPI() {
+            const resultDiv = document.getElementById('stats-result');
+            resultDiv.className = 'loading';
+            resultDiv.innerHTML = '<p>⏳ 正在获取统计信息...</p>';
+            
+            const result = await apiRequest('miniapp_stats_correct.php?platform=taobao');
+            
+            if (result.code === 200) {
+                resultDiv.className = 'success';
+                resultDiv.innerHTML = `
+                    <h3>✅ 统计API测试成功</h3>
+                    <p><strong>总商品数:</strong> ${result.data.goods.total}</p>
+                    <p><strong>Tier1商品:</strong> ${result.data.goods.tier1}</p>
+                    <p><strong>已转链商品:</strong> ${result.data.goods.converted}</p>
+                    <p><strong>有优惠券商品:</strong> ${result.data.goods.with_coupon}</p>
+                    <p><strong>平均价格:</strong> ¥${result.data.goods.avg_price}</p>
+                    <p><strong>今日新增:</strong> ${result.data.today.new_goods}</p>
+                `;
+            } else {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<h3>❌ 统计API测试失败</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+            }
+        }
+        
+        async function testGoodsAPI() {
+            const resultDiv = document.getElementById('goods-result');
+            resultDiv.className = 'loading';
+            resultDiv.innerHTML = '<p>⏳ 正在获取商品列表...</p>';
+            
+            const result = await apiRequest('miniapp_goods_correct.php?page=1&limit=3&platform=taobao');
+            
+            if (result.code === 200) {
+                resultDiv.className = 'success';
+                const goods = result.data.list;
+                let html = `<h3>✅ 商品列表API测试成功</h3>`;
+                html += `<p><strong>总商品数:</strong> ${result.data.pagination.total}</p>`;
+                html += `<p><strong>返回商品数:</strong> ${goods.length}</p>`;
+                
+                goods.forEach((item, index) => {
+                    html += `
+                        <div style="border: 1px solid #eee; margin: 10px 0; padding: 10px;">
+                            <h4>${index + 1}. ${item.title}</h4>
+                            <p><strong>价格:</strong> ¥${item.price} (原价: ¥${item.original_price})</p>
+                            <p><strong>优惠券:</strong> ${item.coupon_amount}元</p>
+                            <p><strong>最终价格:</strong> ¥${item.final_price}</p>
+                            <p><strong>月销量:</strong> ${item.sales}</p>
+                            <p><strong>店铺:</strong> ${item.shop_name}</p>
+                            <p><strong>等级:</strong> Tier ${item.tier_level}</p>
+                        </div>
+                    `;
+                });
+                resultDiv.innerHTML = html;
+            } else {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<h3>❌ 商品列表API测试失败</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+            }
+        }
+        
+        async function testHotGoods() {
+            const resultDiv = document.getElementById('goods-result');
+            resultDiv.className = 'loading';
+            resultDiv.innerHTML = '<p>⏳ 正在获取热门商品...</p>';
+            
+            const result = await apiRequest('miniapp_goods_correct.php?page=1&limit=3&platform=taobao&tier_level=1');
+            
+            if (result.code === 200) {
+                resultDiv.className = 'success';
+                resultDiv.innerHTML = `
+                    <h3>✅ 热门商品API测试成功</h3>
+                    <p><strong>热门商品数:</strong> ${result.data.pagination.total}</p>
+                    <p><strong>返回商品数:</strong> ${result.data.list.length}</p>
+                    <p>所有商品都是Tier1级别的热门商品</p>
+                `;
+            } else {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<h3>❌ 热门商品API测试失败</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+            }
+        }
+        
+        async function testCouponGoods() {
+            const resultDiv = document.getElementById('goods-result');
+            resultDiv.className = 'loading';
+            resultDiv.innerHTML = '<p>⏳ 正在获取优惠券商品...</p>';
+            
+            const result = await apiRequest('miniapp_goods_correct.php?page=1&limit=3&platform=taobao&filter=coupon');
+            
+            if (result.code === 200) {
+                resultDiv.className = 'success';
+                resultDiv.innerHTML = `
+                    <h3>✅ 优惠券商品API测试成功</h3>
+                    <p><strong>优惠券商品数:</strong> ${result.data.pagination.total}</p>
+                    <p><strong>返回商品数:</strong> ${result.data.list.length}</p>
+                    <p>所有商品都有优惠券</p>
+                `;
+            } else {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<h3>❌ 优惠券商品API测试失败</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+            }
+        }
+        
+        async function testSearch() {
+            const keyword = document.getElementById('search-keyword').value;
+            const resultDiv = document.getElementById('search-result');
+            
+            if (!keyword.trim()) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = '<p>❌ 请输入搜索关键词</p>';
+                return;
+            }
+            
+            resultDiv.className = 'loading';
+            resultDiv.innerHTML = '<p>⏳ 正在搜索商品...</p>';
+            
+            const result = await apiRequest(`miniapp_goods_correct.php?page=1&limit=3&platform=taobao&keyword=${encodeURIComponent(keyword)}`);
+            
+            if (result.code === 200) {
+                resultDiv.className = 'success';
+                resultDiv.innerHTML = `
+                    <h3>✅ 搜索功能测试成功</h3>
+                    <p><strong>搜索关键词:</strong> "${keyword}"</p>
+                    <p><strong>搜索结果数:</strong> ${result.data.pagination.total}</p>
+                    <p><strong>返回商品数:</strong> ${result.data.list.length}</p>
+                `;
+            } else {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<h3>❌ 搜索功能测试失败</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+            }
+        }
+        
+        // 页面加载时自动测试统计API
+        window.onload = function() {
+            testStatsAPI();
+        };
+    </script>
+</body>
+</html>

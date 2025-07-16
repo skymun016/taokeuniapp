@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS跨域测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .btn { background: #e41f19; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .btn:hover { background: #c41e3a; }
+        .result { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; white-space: pre-wrap; font-family: monospace; }
+        .success { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        .loading { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🌐 CORS跨域测试</h1>
+            <p>测试大淘客API的跨域配置是否正常工作</p>
+        </div>
+
+        <div class="card">
+            <h2>基础连接测试</h2>
+            <button class="btn" onclick="testConnection()">测试API连接</button>
+            <button class="btn" onclick="testCors()">测试CORS预检</button>
+            <button class="btn" onclick="testStats()">测试统计接口</button>
+            <div id="connectionResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="card">
+            <h2>商品接口测试</h2>
+            <button class="btn" onclick="testGoodsList()">测试商品列表</button>
+            <button class="btn" onclick="testHotGoods()">测试热门商品</button>
+            <button class="btn" onclick="testCouponGoods()">测试优惠券商品</button>
+            <div id="goodsResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="card">
+            <h2>转链接口测试</h2>
+            <input type="text" id="goodsIdInput" placeholder="输入商品ID" style="padding: 8px; margin-right: 10px; width: 200px;">
+            <button class="btn" onclick="testConvertLink()">测试转链</button>
+            <div id="linkResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="card">
+            <h2>错误处理测试</h2>
+            <button class="btn" onclick="test404()">测试404错误</button>
+            <button class="btn" onclick="test405()">测试405错误</button>
+            <div id="errorResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://dtkv2.zhishujiaoyu.com/dtk-service-v2/api/';
+
+        function showResult(elementId, content, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = content;
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result loading';
+            element.textContent = '测试中...';
+        }
+
+        async function testConnection() {
+            showLoading('connectionResult');
+            try {
+                const response = await fetch(API_BASE + 'test.php');
+                const data = await response.json();
+                showResult('connectionResult', `✅ 连接成功\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                showResult('connectionResult', `❌ 连接失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        async function testCors() {
+            showLoading('connectionResult');
+            try {
+                // 发送OPTIONS预检请求
+                const response = await fetch(API_BASE + 'test.php', {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                };
+                
+                showResult('connectionResult', `✅ CORS预检成功\n状态码: ${response.status}\nCORS头部: ${JSON.stringify(corsHeaders, null, 2)}`);
+            } catch (error) {
+                showResult('connectionResult', `❌ CORS预检失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        async function testStats() {
+            showLoading('connectionResult');
+            try {
+                const response = await fetch(API_BASE + 'sync.php?type=stats&platform=taobao');
+                const data = await response.json();
+                showResult('connectionResult', `✅ 统计接口成功\n状态码: ${response.status}\n数据: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                showResult('connectionResult', `❌ 统计接口失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        async function testGoodsList() {
+            showLoading('goodsResult');
+            try {
+                const response = await fetch(API_BASE + 'goods.php?page=1&limit=5');
+                const data = await response.json();
+                showResult('goodsResult', `✅ 商品列表成功\n状态码: ${response.status}\n商品数量: ${data.data?.list?.length || 0}\n数据: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                showResult('goodsResult', `❌ 商品列表失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        async function testHotGoods() {
+            showLoading('goodsResult');
+            try {
+                const response = await fetch(API_BASE + 'goods.php?tier_level=1&link_status=1&limit=3');
+                const data = await response.json();
+                showResult('goodsResult', `✅ 热门商品成功\n状态码: ${response.status}\n商品数量: ${data.data?.list?.length || 0}\n数据: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                showResult('goodsResult', `❌ 热门商品失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        async function testCouponGoods() {
+            showLoading('goodsResult');
+            try {
+                const response = await fetch(API_BASE + 'goods.php?filter=coupon&limit=3');
+                const data = await response.json();
+                showResult('goodsResult', `✅ 优惠券商品成功\n状态码: ${response.status}\n商品数量: ${data.data?.list?.length || 0}\n数据: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                showResult('goodsResult', `❌ 优惠券商品失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        async function testConvertLink() {
+            const goodsId = document.getElementById('goodsIdInput').value;
+            if (!goodsId) {
+                showResult('linkResult', '❌ 请输入商品ID', true);
+                return;
+            }
+
+            showLoading('linkResult');
+            try {
+                const response = await fetch(API_BASE + 'link.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        goods_id: goodsId,
+                        platform: 'taobao'
+                    })
+                });
+                const data = await response.json();
+                showResult('linkResult', `✅ 转链测试成功\n状态码: ${response.status}\n数据: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                showResult('linkResult', `❌ 转链测试失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        async function test404() {
+            showLoading('errorResult');
+            try {
+                const response = await fetch(API_BASE + 'nonexistent.php');
+                const data = await response.json();
+                showResult('errorResult', `404错误处理\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                showResult('errorResult', `❌ 404测试失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        async function test405() {
+            showLoading('errorResult');
+            try {
+                const response = await fetch(API_BASE + 'goods.php', {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                showResult('errorResult', `405错误处理\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                showResult('errorResult', `❌ 405测试失败\n错误: ${error.message}`, true);
+            }
+        }
+
+        // 页面加载时自动测试连接
+        window.onload = function() {
+            testConnection();
+        };
+    </script>
+</body>
+</html>
