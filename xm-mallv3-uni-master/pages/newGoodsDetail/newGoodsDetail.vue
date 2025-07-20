@@ -106,19 +106,32 @@
 
 		<!-- 底部操作栏 -->
 		<view class="tui-bottom-bar">
-			<view class="tui-bar-left">
-				<view class="tui-bar-item" @tap="collect">
-					<tui-icon :name="isCollected ? 'heart-fill' : 'heart'" :color="isCollected ? '#e41f19' : '#666'" :size="20"></tui-icon>
-					<text class="tui-bar-text">收藏</text>
-				</view>
-				<view class="tui-bar-item" @tap="share">
-					<tui-icon name="share" color="#666" :size="20"></tui-icon>
-					<text class="tui-bar-text">分享</text>
-				</view>
-			</view>
-			<view class="tui-bar-right">
+			<view class="tui-bar-buttons">
+				<!-- 平台助手按钮 -->
+				<!-- #ifdef MP-WEIXIN -->
+				<button v-if="configkefu.minionline==1 || configkefu.minionline==3" @click="toCustomerService"
+					class="tui-helper-btn" :class="'tui-helper-' + goodsInfo.platform">
+					<text class="tui-helper-text">{{ getPlatformHelperText() }}</text>
+				</button>
+				<button v-else-if="configkefu.minionline==2" @click="toCustomerServiceWebview"
+					class="tui-helper-btn" :class="'tui-helper-' + goodsInfo.platform">
+					<text class="tui-helper-text">{{ getPlatformHelperText() }}</text>
+				</button>
+				<button v-else open-type="contact"
+					class="tui-helper-btn" :class="'tui-helper-' + goodsInfo.platform">
+					<text class="tui-helper-text">{{ getPlatformHelperText() }}</text>
+				</button>
+				<!-- #endif -->
+				<!-- #ifndef MP-WEIXIN -->
+				<button @click="toCustomerService"
+					class="tui-helper-btn" :class="'tui-helper-' + goodsInfo.platform">
+					<text class="tui-helper-text">{{ getPlatformHelperText() }}</text>
+				</button>
+				<!-- #endif -->
+
+				<!-- 立即购买按钮 -->
 				<view class="tui-buy-btn" @tap="buyNow" :class="{ 'tui-loading': loading }">
-					<text class="tui-buy-text">{{ loading ? '转链中...' : '立即购买' }}</text>
+					<text class="tui-buy-text">{{ getBuyButtonText() }}</text>
 				</view>
 			</view>
 		</view>
@@ -162,6 +175,9 @@ export default {
 			loading: false,
 			isCollected: false,
 
+			// 客服配置
+			configkefu: {},
+
 			// 弹窗相关
 			showModal: false,
 			modalTitle: '',
@@ -188,6 +204,7 @@ export default {
 
 		this.getSystemInfo();
 		this.loadGoodsDetail();
+		this.loadKefuConfig();
 	},
 
 	computed: {
@@ -236,6 +253,86 @@ export default {
 	},
 
 	methods: {
+		/**
+		 * 获取平台助手按钮文字
+		 */
+		getPlatformHelperText() {
+			if (this.goodsInfo.platform === 1) {
+				return '淘宝助手';
+			} else if (this.goodsInfo.platform === 2) {
+				return '京东助手';
+			}
+			return '平台助手';
+		},
+
+		/**
+		 * 获取购买按钮文字
+		 */
+		getBuyButtonText() {
+			if (this.loading) {
+				return '转链中...';
+			}
+			return this.hasCoupon ? '领券购买' : '立即购买';
+		},
+
+		/**
+		 * 客服功能 - 根据配置调用不同的客服方式
+		 */
+		toCustomerService() {
+			if (this.configkefu.minionline == 2 && this.configkefu.kefuurl) {
+				// 跳转到客服网页
+				uni.navigateTo({
+					url: `/pages/webview/h5?url=${this.configkefu.kefuurl}`
+				});
+			} else if (this.configkefu.minionline == 3) {
+				// 拨打客服电话
+				const telstr = this.configkefu.kefutel;
+				uni.makePhoneCall({
+					phoneNumber: telstr
+				});
+			} else {
+				// 跳转到内置客服页面
+				uni.navigateTo({
+					url: '/pages/im/h5'
+				});
+			}
+		},
+
+		/**
+		 * 客服网页版
+		 */
+		toCustomerServiceWebview() {
+			if (this.configkefu.kefuurl) {
+				uni.navigateTo({
+					url: `/pages/webview/h5?url=${this.configkefu.kefuurl}`
+				});
+			}
+		},
+
+		/**
+		 * 加载客服配置
+		 */
+		async loadKefuConfig() {
+			try {
+				// 使用与首页相同的API获取客服配置
+				const response = await this.$request.get('diypage.indexv2', {
+					samkey: (new Date()).valueOf(),
+					id: 0 // 使用默认ID获取基础配置
+				});
+
+				if (response.errno === 0 && response.data && response.data.config) {
+					this.configkefu = response.data.config.kefu || {};
+					console.log('客服配置加载成功:', this.configkefu);
+				}
+			} catch (error) {
+				console.error('加载客服配置失败:', error);
+				// 设置默认配置，确保按钮可以正常显示
+				this.configkefu = {
+					minionline: 0 // 默认使用小程序原生客服
+				};
+			}
+		},
+
 		/**
 		 * 获取系统信息
 		 */
@@ -476,27 +573,7 @@ export default {
 			uni.navigateBack();
 		},
 
-		/**
-		 * 收藏
-		 */
-		collect() {
-			this.isCollected = !this.isCollected;
-			uni.showToast({
-				title: this.isCollected ? '收藏成功' : '取消收藏',
-				icon: 'none'
-			});
-		},
 
-		/**
-		 * 分享
-		 */
-		share() {
-			// 这里可以实现分享功能
-			uni.showToast({
-				title: '分享功能开发中',
-				icon: 'none'
-			});
-		},
 
 		/**
 		 * 立即购买 - 转链
@@ -1396,41 +1473,57 @@ export default {
 	border-top: 1rpx solid #f0f0f0;
 	padding: 20rpx 30rpx;
 	padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
 	z-index: 999;
 }
 
-.tui-bar-left {
+.tui-bar-buttons {
 	display: flex;
-	align-items: center;
+	gap: 20rpx;
+	width: 100%;
 }
 
-.tui-bar-item {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	margin-right: 40rpx;
-}
-
-.tui-bar-text {
-	font-size: 20rpx;
-	color: #666;
-	margin-top: 8rpx;
-}
-
-.tui-bar-right {
+/* 平台助手按钮 */
+.tui-helper-btn {
 	flex: 1;
-	display: flex;
-	justify-content: flex-end;
+	border-radius: 50rpx;
+	padding: 20rpx 30rpx;
+	text-align: center;
+	border: none;
+	font-size: 28rpx;
+	font-weight: bold;
+	color: #fff;
+	background: none;
+	margin: 0;
+	line-height: 1;
 }
 
+/* 淘宝助手按钮样式 */
+.tui-helper-1 {
+	background: linear-gradient(135deg, #ff6a00, #ff8f00);
+}
+
+/* 京东助手按钮样式 */
+.tui-helper-2 {
+	background: linear-gradient(135deg, #e93323, #ed4014);
+}
+
+/* 默认助手按钮样式 */
+.tui-helper-btn:not(.tui-helper-1):not(.tui-helper-2) {
+	background: linear-gradient(135deg, #666, #888);
+}
+
+.tui-helper-text {
+	color: #fff;
+	font-size: 28rpx;
+	font-weight: bold;
+}
+
+/* 立即购买按钮 */
 .tui-buy-btn {
+	flex: 1;
 	background: linear-gradient(135deg, #e41f19, #ff6034);
 	border-radius: 50rpx;
-	padding: 20rpx 60rpx;
-	min-width: 200rpx;
+	padding: 20rpx 30rpx;
 	text-align: center;
 }
 
