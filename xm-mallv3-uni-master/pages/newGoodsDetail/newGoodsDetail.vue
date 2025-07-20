@@ -66,28 +66,17 @@
 					</view>
 				</view>
 
-				<!-- 优惠券信息 - 修复显示逻辑 -->
+				<!-- 优惠券信息 - 简洁样式 -->
 				<view class="tui-coupon-section" v-if="hasCoupon">
-					<view class="tui-coupon-card">
-						<view class="tui-coupon-left">
-							<!-- 优先显示具体优惠券金额 -->
-							<text class="tui-coupon-amount" v-if="goodsInfo.coupon_amount && goodsInfo.coupon_amount > 0">¥{{ formatPrice(goodsInfo.coupon_amount) }}</text>
-							<!-- 其次显示优惠券信息 -->
-							<text class="tui-coupon-amount" v-else-if="goodsInfo.coupon_info && goodsInfo.coupon_info !== '满0元减0元'">{{ goodsInfo.coupon_info }}</text>
-							<!-- 最后根据价格差计算优惠券金额 -->
-							<text class="tui-coupon-amount" v-else-if="goodsInfo.coupon_price && goodsInfo.price && goodsInfo.coupon_price < goodsInfo.price">¥{{ formatPrice(goodsInfo.price - goodsInfo.coupon_price) }}</text>
-							<!-- 默认显示 -->
-							<text class="tui-coupon-amount" v-else>优惠券</text>
-
-							<!-- 使用条件 -->
-							<text class="tui-coupon-condition" v-if="goodsInfo.coupon_condition && goodsInfo.coupon_condition > 0">满{{ formatPrice(goodsInfo.coupon_condition) }}可用</text>
-							<text class="tui-coupon-condition" v-else-if="goodsInfo.coupon_amount && goodsInfo.coupon_amount > 0">无门槛</text>
-							<text class="tui-coupon-condition" v-else>立即领取</text>
-						</view>
-						<view class="tui-coupon-divider"></view>
-						<view class="tui-coupon-right">
-							<text class="tui-coupon-btn">领券</text>
-						</view>
+					<view class="tui-coupon-simple">
+						<!-- 优先显示具体优惠券金额 -->
+						<text class="tui-coupon-text" v-if="goodsInfo.coupon_amount && goodsInfo.coupon_amount > 0">¥{{ formatPrice(goodsInfo.coupon_amount) }}</text>
+						<!-- 其次显示优惠券信息 -->
+						<text class="tui-coupon-text" v-else-if="goodsInfo.coupon_info && goodsInfo.coupon_info !== '满0元减0元'">{{ goodsInfo.coupon_info }}</text>
+						<!-- 最后根据价格差计算优惠券金额 -->
+						<text class="tui-coupon-text" v-else-if="goodsInfo.coupon_price && goodsInfo.price && goodsInfo.coupon_price < goodsInfo.price">¥{{ formatPrice(goodsInfo.price - goodsInfo.coupon_price) }}</text>
+						<!-- 默认显示 -->
+						<text class="tui-coupon-text" v-else>优惠券</text>
 					</view>
 				</view>
 
@@ -1326,79 +1315,27 @@ export default {
 	margin-left: 20rpx;
 }
 
-/* 优惠券信息 */
+/* 优惠券信息 - 简洁样式 */
 .tui-coupon-section {
 	margin-bottom: 30rpx;
 }
 
-.tui-coupon-card {
+.tui-coupon-simple {
 	background: linear-gradient(135deg, #ff4757, #ff3742);
 	border-radius: 12rpx;
+	padding: 20rpx 30rpx;
 	display: flex;
 	align-items: center;
-	overflow: hidden;
+	justify-content: center;
 	box-shadow: 0 4rpx 12rpx rgba(255, 71, 87, 0.3);
 	border: 2rpx solid rgba(255,255,255,0.2);
 }
 
-.tui-coupon-left {
-	flex: 1;
-	padding: 25rpx 30rpx;
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-}
-
-.tui-coupon-amount {
+.tui-coupon-text {
 	color: #fff;
-	font-size: 36rpx;
+	font-size: 32rpx;
 	font-weight: 700;
-	margin-bottom: 8rpx;
-}
-
-.tui-coupon-condition {
-	color: rgba(255,255,255,0.9);
-	font-size: 22rpx;
-}
-
-.tui-coupon-divider {
-	width: 2rpx;
-	height: 80rpx;
-	background: rgba(255,255,255,0.3);
-	position: relative;
-}
-
-.tui-coupon-divider::before,
-.tui-coupon-divider::after {
-	content: '';
-	position: absolute;
-	width: 20rpx;
-	height: 20rpx;
-	background: #f5f5f5;
-	border-radius: 50%;
-	left: 50%;
-	transform: translateX(-50%);
-}
-
-.tui-coupon-divider::before {
-	top: -10rpx;
-}
-
-.tui-coupon-divider::after {
-	bottom: -10rpx;
-}
-
-.tui-coupon-right {
-	padding: 25rpx 30rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.tui-coupon-btn {
-	color: #fff;
-	font-size: 28rpx;
-	font-weight: 700;
+	text-align: center;
 }
 
 /* 商品信息 */
