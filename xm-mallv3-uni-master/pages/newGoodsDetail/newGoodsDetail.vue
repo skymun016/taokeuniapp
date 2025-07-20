@@ -12,94 +12,112 @@
 			</view>
 		</view>
 
-		<!-- 商品图片轮播 -->
-		<view class="tui-banner-swiper" :style="{ marginTop: height + 'px' }">
-			<swiper :autoplay="false" :interval="5000" :duration="300" :circular="true"
-				class="tui-square-swiper" @change="bannerChange">
-				<block v-for="(item, index) in goodsImages" :key="index">
-					<swiper-item class="swiper" :data-index="index" @tap.stop="previewImage">
-						<image mode="aspectFill" :src="item" class="tui-slide-image" />
-					</swiper-item>
-				</block>
-			</swiper>
+		<!-- 可滚动内容区域 -->
+		<scroll-view
+			scroll-y
+			class="tui-scroll-content"
+			:style="{ height: scrollHeight + 'px', marginTop: height + 'px' }"
+			:scroll-top="scrollTop"
+			@scroll="onScroll">
 
-			<!-- 图片指示器 -->
-			<view class="tui-banner-indicators" v-if="goodsImages.length > 1">
-				<view class="tui-indicator"
-					v-for="(item, index) in goodsImages"
-					:key="index"
-					:class="{ 'tui-indicator-active': index === bannerIndex }">
-				</view>
-			</view>
+			<!-- 商品图片轮播 -->
+			<view class="tui-banner-swiper">
+				<swiper :autoplay="false" :interval="5000" :duration="300" :circular="true"
+					class="tui-square-swiper" @change="bannerChange">
+					<block v-for="(item, index) in goodsImages" :key="index">
+						<swiper-item class="swiper" :data-index="index" @tap.stop="previewImage">
+							<image mode="aspectFill" :src="item" class="tui-slide-image" />
+						</swiper-item>
+					</block>
+				</swiper>
 
-			<!-- 图片计数 -->
-			<view class="tui-banner-count">
-				<text class="tui-count-text">{{ bannerIndex + 1 }}/{{ goodsImages.length }}</text>
-			</view>
-		</view>
-
-		<!-- 商品基本信息 -->
-		<view class="tui-goods-info">
-			<!-- 平台标识 -->
-			<view class="tui-platform-badge" :class="'tui-platform-' + goodsInfo.platform" v-if="goodsInfo.platform">
-				{{ goodsInfo.platform_name }}
-			</view>
-
-			<!-- 商品标题 -->
-			<view class="tui-goods-title">{{ goodsInfo.title || goodsInfo.short_title }}</view>
-
-			<!-- 价格信息 -->
-			<view class="tui-price-section">
-				<view class="tui-price-main">
-					<text class="tui-price-symbol">¥</text>
-					<text class="tui-price-num">{{ formatPrice(goodsInfo.coupon_price || goodsInfo.price) }}</text>
-					<text v-if="goodsInfo.price > (goodsInfo.coupon_price || goodsInfo.price)" 
-						class="tui-price-original">¥{{ formatPrice(goodsInfo.price) }}</text>
-				</view>
-
-			</view>
-
-			<!-- 优惠券信息 -->
-			<view class="tui-coupon-section" v-if="hasCoupon">
-				<view class="tui-coupon-card">
-					<view class="tui-coupon-left">
-						<text class="tui-coupon-amount" v-if="goodsInfo.coupon_amount > 0">¥{{ formatPrice(goodsInfo.coupon_amount) }}</text>
-						<text class="tui-coupon-amount" v-else-if="goodsInfo.coupon_info && goodsInfo.coupon_info !== '满0元减0元'">{{ goodsInfo.coupon_info }}</text>
-						<text class="tui-coupon-condition" v-if="goodsInfo.coupon_condition">满{{ formatPrice(goodsInfo.coupon_condition) }}可用</text>
-						<text class="tui-coupon-condition" v-else-if="goodsInfo.coupon_amount > 0">无门槛</text>
-						<text class="tui-coupon-condition" v-else>优惠券</text>
-					</view>
-					<view class="tui-coupon-divider"></view>
-					<view class="tui-coupon-right">
-						<text class="tui-coupon-btn">领券</text>
+				<!-- 图片指示器 -->
+				<view class="tui-banner-indicators" v-if="goodsImages.length > 1">
+					<view class="tui-indicator"
+						v-for="(item, index) in goodsImages"
+						:key="index"
+						:class="{ 'tui-indicator-active': index === bannerIndex }">
 					</view>
 				</view>
+
+				<!-- 图片计数 -->
+				<view class="tui-banner-count">
+					<text class="tui-count-text">{{ bannerIndex + 1 }}/{{ goodsImages.length }}</text>
+				</view>
 			</view>
 
-			<!-- 商品信息 -->
-			<view class="tui-goods-meta">
-				<view class="tui-meta-item" v-if="goodsInfo.shop_name">
-					<text class="tui-meta-label">店铺</text>
-					<text class="tui-meta-value">{{ goodsInfo.shop_name }}</text>
+			<!-- 商品基本信息 -->
+			<view class="tui-goods-info">
+				<!-- 平台标识 -->
+				<view class="tui-platform-badge" :class="'tui-platform-' + goodsInfo.platform" v-if="goodsInfo.platform">
+					{{ goodsInfo.platform_name }}
 				</view>
-				<view class="tui-meta-item" v-if="goodsInfo.sales_volume > 0">
-					<text class="tui-meta-label">销量</text>
-					<text class="tui-meta-value">{{ goodsInfo.sales_volume }}人付款</text>
-				</view>
-				<view class="tui-meta-item" v-if="goodsInfo.category_name">
-					<text class="tui-meta-label">分类</text>
-					<text class="tui-meta-value">{{ goodsInfo.category_name }}</text>
-				</view>
-			</view>
-		</view>
 
-		<!-- 商品详情描述 -->
-		<view class="tui-goods-desc" v-if="goodsInfo.title">
-			<view class="tui-desc-title">商品详情</view>
-			<view class="tui-desc-content">
-				<text class="tui-desc-text">{{ goodsInfo.title }}</text>
+				<!-- 商品标题 -->
+				<view class="tui-goods-title">{{ goodsInfo.title || goodsInfo.short_title }}</view>
+
+				<!-- 价格信息 -->
+				<view class="tui-price-section">
+					<view class="tui-price-main">
+						<text class="tui-price-symbol">¥</text>
+						<text class="tui-price-num">{{ formatPrice(goodsInfo.coupon_price || goodsInfo.price) }}</text>
+						<text v-if="goodsInfo.price > (goodsInfo.coupon_price || goodsInfo.price)"
+							class="tui-price-original">¥{{ formatPrice(goodsInfo.price) }}</text>
+					</view>
+				</view>
+
+				<!-- 优惠券信息 - 修复显示逻辑 -->
+				<view class="tui-coupon-section" v-if="hasCoupon">
+					<view class="tui-coupon-card">
+						<view class="tui-coupon-left">
+							<!-- 优先显示具体优惠券金额 -->
+							<text class="tui-coupon-amount" v-if="goodsInfo.coupon_amount && goodsInfo.coupon_amount > 0">¥{{ formatPrice(goodsInfo.coupon_amount) }}</text>
+							<!-- 其次显示优惠券信息 -->
+							<text class="tui-coupon-amount" v-else-if="goodsInfo.coupon_info && goodsInfo.coupon_info !== '满0元减0元'">{{ goodsInfo.coupon_info }}</text>
+							<!-- 最后根据价格差计算优惠券金额 -->
+							<text class="tui-coupon-amount" v-else-if="goodsInfo.coupon_price && goodsInfo.price && goodsInfo.coupon_price < goodsInfo.price">¥{{ formatPrice(goodsInfo.price - goodsInfo.coupon_price) }}</text>
+							<!-- 默认显示 -->
+							<text class="tui-coupon-amount" v-else>优惠券</text>
+
+							<!-- 使用条件 -->
+							<text class="tui-coupon-condition" v-if="goodsInfo.coupon_condition && goodsInfo.coupon_condition > 0">满{{ formatPrice(goodsInfo.coupon_condition) }}可用</text>
+							<text class="tui-coupon-condition" v-else-if="goodsInfo.coupon_amount && goodsInfo.coupon_amount > 0">无门槛</text>
+							<text class="tui-coupon-condition" v-else>立即领取</text>
+						</view>
+						<view class="tui-coupon-divider"></view>
+						<view class="tui-coupon-right">
+							<text class="tui-coupon-btn">领券</text>
+						</view>
+					</view>
+				</view>
+
+
+
+				<!-- 商品信息 -->
+				<view class="tui-goods-meta">
+					<view class="tui-meta-item" v-if="goodsInfo.shop_name">
+						<text class="tui-meta-label">店铺</text>
+						<text class="tui-meta-value">{{ goodsInfo.shop_name }}</text>
+					</view>
+					<view class="tui-meta-item" v-if="goodsInfo.sales_volume > 0">
+						<text class="tui-meta-label">销量</text>
+						<text class="tui-meta-value">{{ goodsInfo.sales_volume }}人付款</text>
+					</view>
+					<view class="tui-meta-item" v-if="goodsInfo.category_name">
+						<text class="tui-meta-label">分类</text>
+						<text class="tui-meta-value">{{ goodsInfo.category_name }}</text>
+					</view>
+				</view>
 			</view>
-		</view>
+
+			<!-- 商品详情描述 -->
+			<view class="tui-goods-desc" v-if="goodsInfo.title">
+				<view class="tui-desc-title">商品详情</view>
+				<view class="tui-desc-content">
+					<text class="tui-desc-text">{{ goodsInfo.title }}</text>
+				</view>
+			</view>
+		</scroll-view>
 
 		<!-- 底部操作栏 -->
 		<view class="tui-bottom-bar">
@@ -119,8 +137,6 @@
 				</view>
 			</view>
 		</view>
-
-		<!-- 使用系统弹窗 -->
 
 		<!-- 加载状态 -->
 		<view class="tui-loading-overlay" v-if="pageLoading">
@@ -144,6 +160,11 @@ export default {
 			titleTop: 0,
 			bannerIndex: 0,
 
+			// 滚动相关
+			scrollHeight: 0,
+			scrollTop: 0,
+			bottomBarHeight: 88, // 底部操作栏高度（实际高度）
+
 			// 商品信息
 			productId: '',
 			platform: 1,
@@ -165,10 +186,10 @@ export default {
 
 	onLoad(options) {
 		console.log('新商品详情页接收参数:', options);
-		
+
 		this.productId = options.product_id || '';
 		this.platform = parseInt(options.platform) || 1;
-		
+
 		if (!this.productId) {
 			uni.showToast({
 				title: '商品参数错误',
@@ -186,24 +207,45 @@ export default {
 
 	computed: {
 		/**
-		 * 判断是否有优惠券
+		 * 判断是否有优惠券 - 增强版本
 		 */
 		hasCoupon() {
+			console.log('🎫 计算优惠券显示状态:', {
+				coupon_amount: this.goodsInfo.coupon_amount,
+				coupon_info: this.goodsInfo.coupon_info,
+				coupon_condition: this.goodsInfo.coupon_condition,
+				coupon_price: this.goodsInfo.coupon_price,
+				price: this.goodsInfo.price
+			});
+
 			// 有优惠券金额
 			if (this.goodsInfo.coupon_amount && this.goodsInfo.coupon_amount > 0) {
+				console.log('✅ 有优惠券金额:', this.goodsInfo.coupon_amount);
 				return true;
 			}
+
 			// 有优惠券信息且不是默认的"满0元减0元"
 			if (this.goodsInfo.coupon_info &&
 				this.goodsInfo.coupon_info !== '满0元减0元' &&
 				this.goodsInfo.coupon_info.trim() !== '') {
+				console.log('✅ 有优惠券信息:', this.goodsInfo.coupon_info);
 				return true;
 			}
+
 			// 券后价小于原价
 			if (this.goodsInfo.coupon_price && this.goodsInfo.price &&
-				this.goodsInfo.coupon_price < this.goodsInfo.price) {
+				parseFloat(this.goodsInfo.coupon_price) < parseFloat(this.goodsInfo.price)) {
+				console.log('✅ 券后价小于原价:', this.goodsInfo.coupon_price, '<', this.goodsInfo.price);
 				return true;
 			}
+
+			// 有优惠券条件信息
+			if (this.goodsInfo.coupon_condition && this.goodsInfo.coupon_condition > 0) {
+				console.log('✅ 有优惠券条件:', this.goodsInfo.coupon_condition);
+				return true;
+			}
+
+			console.log('❌ 没有优惠券信息');
 			return false;
 		}
 	},
@@ -227,6 +269,22 @@ export default {
 			this.arrowTop = 10;
 			this.titleTop = 13;
 			// #endif
+
+			// 计算滚动区域高度：屏幕高度 - 导航栏高度 - 底部操作栏高度 - 安全区域
+			const safeAreaBottom = systemInfo.safeAreaInsets ? systemInfo.safeAreaInsets.bottom : 0;
+			// 底部操作栏实际高度 = padding(20rpx) + 内容高度(约48rpx) + padding-bottom(20rpx + 安全区域)
+			const actualBottomBarHeight = uni.upx2px(40) + 48 + safeAreaBottom; // 约88rpx + 安全区域
+			this.scrollHeight = systemInfo.windowHeight - this.height - actualBottomBarHeight;
+
+			console.log('📐 页面尺寸信息:', {
+				windowHeight: systemInfo.windowHeight,
+				windowWidth: systemInfo.windowWidth,
+				headerHeight: this.height,
+				bottomBarHeight: this.bottomBarHeight,
+				actualBottomBarHeight: actualBottomBarHeight,
+				safeAreaBottom: safeAreaBottom,
+				scrollHeight: this.scrollHeight
+			});
 		},
 
 		/**
@@ -238,40 +296,57 @@ export default {
 		},
 
 		/**
-		 * 加载商品详情
+		 * 加载商品详情 - 增强版本
 		 */
 		async loadGoodsDetail() {
 			this.pageLoading = true;
 
 			try {
-				console.log('加载商品详情，product_id:', this.productId, 'platform:', this.platform);
+				console.log('📦 加载商品详情，product_id:', this.productId, 'platform:', this.platform);
 
 				// 直接从存储中获取商品信息
 				const cachedGoodsInfo = uni.getStorageSync('currentGoodsInfo');
 
 				if (cachedGoodsInfo && cachedGoodsInfo.product_id === this.productId) {
-					console.log('从缓存加载商品详情:', cachedGoodsInfo);
-					console.log('优惠券信息检查:', {
+					console.log('📦 从缓存加载商品详情:', cachedGoodsInfo);
+
+					// 详细的优惠券信息检查
+					console.log('🎫 优惠券信息详细检查:', {
 						coupon_amount: cachedGoodsInfo.coupon_amount,
+						coupon_amount_type: typeof cachedGoodsInfo.coupon_amount,
 						coupon_info: cachedGoodsInfo.coupon_info,
 						coupon_condition: cachedGoodsInfo.coupon_condition,
 						price: cachedGoodsInfo.price,
-						coupon_price: cachedGoodsInfo.coupon_price
+						price_type: typeof cachedGoodsInfo.price,
+						coupon_price: cachedGoodsInfo.coupon_price,
+						coupon_price_type: typeof cachedGoodsInfo.coupon_price
 					});
 
-					this.goodsInfo = cachedGoodsInfo;
+					// 数据类型转换和验证
+					this.goodsInfo = this.processGoodsData(cachedGoodsInfo);
 					this.setupGoodsImages();
 
 					// 清除缓存
 					uni.removeStorageSync('currentGoodsInfo');
 
-					console.log('商品详情加载成功:', this.goodsInfo);
+					console.log('✅ 商品详情加载成功:', this.goodsInfo);
+
+					// 如果缓存中的优惠券信息不完整，尝试预加载完整信息
+					if (!this.hasCoupon || this.needsMoreCouponInfo()) {
+						console.log('🔄 优惠券信息不完整，尝试预加载...');
+						this.preloadCouponInfo();
+					}
+
+					// 强制触发优惠券计算
+					this.$nextTick(() => {
+						console.log('🔄 强制更新优惠券显示状态:', this.hasCoupon);
+					});
 				} else {
 					throw new Error('商品信息已过期，请重新选择商品');
 				}
 
 			} catch (error) {
-				console.error('加载商品详情失败:', error);
+				console.error('❌ 加载商品详情失败:', error);
 				uni.showToast({
 					title: error.message || '加载失败',
 					icon: 'none'
@@ -285,20 +360,108 @@ export default {
 		},
 
 		/**
+		 * 处理商品数据 - 确保数据类型正确
+		 */
+		processGoodsData(rawData) {
+			const processedData = { ...rawData };
+
+			// 确保数值类型字段是数字
+			const numericFields = ['coupon_amount', 'price', 'coupon_price', 'coupon_condition', 'sales_volume'];
+			numericFields.forEach(field => {
+				if (processedData[field] !== undefined && processedData[field] !== null) {
+					const numValue = parseFloat(processedData[field]);
+					processedData[field] = isNaN(numValue) ? 0 : numValue;
+				}
+			});
+
+			// 确保字符串类型字段是字符串
+			const stringFields = ['coupon_info', 'title', 'short_title', 'shop_name'];
+			stringFields.forEach(field => {
+				if (processedData[field] !== undefined && processedData[field] !== null) {
+					processedData[field] = String(processedData[field]);
+				}
+			});
+
+			console.log('🔧 数据处理完成:', processedData);
+			return processedData;
+		},
+
+		/**
 		 * 设置商品图片
 		 */
 		setupGoodsImages() {
 			this.goodsImages = [];
-			
+
 			// 添加主图
 			if (this.goodsInfo.main_image) {
 				this.goodsImages.push(this.goodsInfo.main_image);
 			}
-			
+
 			// 如果没有图片，使用默认图片
 			if (this.goodsImages.length === 0) {
 				this.goodsImages.push('/static/images/default_img.png');
 			}
+		},
+
+		/**
+		 * 检查是否需要更多优惠券信息
+		 */
+		needsMoreCouponInfo() {
+			// 如果没有任何优惠券相关信息，则需要预加载
+			return !this.goodsInfo.coupon_amount &&
+				   !this.goodsInfo.coupon_info &&
+				   !this.goodsInfo.coupon_condition &&
+				   !this.goodsInfo.coupon_price;
+		},
+
+		/**
+		 * 预加载优惠券信息
+		 */
+		async preloadCouponInfo() {
+			try {
+				console.log('🔄 开始预加载优惠券信息...');
+
+				// 调用转链接口获取完整信息（但不显示转链结果）
+				const response = await newTaokeApi.request.convertSingleProduct(this.productId, this.platform);
+
+				if (response) {
+					console.log('✅ 预加载获取到数据:', response);
+
+					// 提取优惠券相关信息并更新
+					let productData = null;
+					if (response.status === 'success' && response.data) {
+						productData = response.data;
+					} else if (response.price || response.taokouling) {
+						productData = response;
+					} else if (response.data) {
+						productData = response.data;
+					}
+
+					if (productData) {
+						// 只更新优惠券相关字段
+						const couponFields = ['coupon_amount', 'coupon_info', 'coupon_condition', 'coupon_price'];
+						couponFields.forEach(field => {
+							if (productData[field] !== undefined) {
+								console.log(`🎫 更新优惠券字段 ${field}:`, productData[field]);
+								this.goodsInfo[field] = productData[field];
+							}
+						});
+
+						// 强制更新UI
+						this.$forceUpdate();
+						console.log('✅ 优惠券信息预加载完成');
+					}
+				}
+			} catch (error) {
+				console.log('⚠️ 预加载优惠券信息失败，将在点击购买时获取:', error.message);
+			}
+		},
+
+		/**
+		 * 滚动事件处理
+		 */
+		onScroll(e) {
+			this.scrollTop = e.detail.scrollTop;
 		},
 
 
@@ -976,7 +1139,7 @@ export default {
 
 <style scoped>
 .container {
-	background: #f5f5f5;
+	background: #fff;
 	min-height: 100vh;
 }
 
@@ -1022,6 +1185,16 @@ export default {
 	color: #333;
 	font-size: 36rpx;
 	font-weight: 600;
+}
+
+/* 滚动内容区域 */
+.tui-scroll-content {
+	position: fixed;
+	left: 0;
+	right: 0;
+	background: #fff;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 /* 商品图片轮播 */
@@ -1089,8 +1262,8 @@ export default {
 /* 商品基本信息 */
 .tui-goods-info {
 	background: #fff;
-	margin: 20rpx;
-	border-radius: 16rpx;
+	margin: 0;
+	border-radius: 0;
 	padding: 30rpx;
 	position: relative;
 }
@@ -1254,9 +1427,10 @@ export default {
 /* 商品详情描述 */
 .tui-goods-desc {
 	background: #fff;
-	margin: 20rpx;
-	border-radius: 16rpx;
+	margin: 0;
+	border-radius: 0;
 	padding: 30rpx;
+	border-top: 1rpx solid #f0f0f0;
 }
 
 .tui-desc-title {
@@ -1274,6 +1448,10 @@ export default {
 	font-size: 28rpx;
 	color: #666;
 }
+
+
+
+
 
 /* 底部操作栏 */
 .tui-bottom-bar {
