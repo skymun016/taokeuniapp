@@ -1,0 +1,349 @@
+/**
+ * 新淘客API封装
+ * 基于接口文档 https://taokeapi.ymj520.top/api/v1
+ * 支持淘宝和京东商品的统一搜索和转链
+ */
+
+// 新淘客API配置
+const NEW_TAOKE_CONFIG = {
+    // API基础地址
+    baseUrl: 'https://taokeapi.ymj520.top/api/v1',
+    
+    // 请求超时时间
+    timeout: 15000,
+    
+    // 是否显示加载提示
+    showLoading: true,
+    
+    // 平台标识
+    platforms: {
+        TAOBAO: 1,  // 淘宝
+        JD: 2,      // 京东
+        PDD: 3      // 拼多多
+    }
+};
+
+/**
+ * 新淘客请求封装
+ */
+const newTaokeRequest = {
+    
+    /**
+     * 基础请求方法
+     * @param {Object} options 请求选项
+     */
+    request(options) {
+        return new Promise((resolve, reject) => {
+            // 显示加载提示
+            if (options.showLoading !== false && NEW_TAOKE_CONFIG.showLoading) {
+                uni.showLoading({
+                    title: '加载中...',
+                    mask: true
+                });
+            }
+            
+            // 构建完整URL
+            const fullUrl = NEW_TAOKE_CONFIG.baseUrl + '/' + options.url.replace(/^\//, '');
+            
+            console.log('新淘客API请求:', {
+                url: fullUrl,
+                method: options.method || 'GET',
+                data: options.data
+            });
+            
+            // 发起请求
+            uni.request({
+                url: fullUrl,
+                method: options.method || 'GET',
+                data: options.data || {},
+                timeout: options.timeout || NEW_TAOKE_CONFIG.timeout,
+                header: {
+                    'Content-Type': 'application/json',
+                    ...options.header
+                },
+                success: (res) => {
+                    console.log('新淘客API响应:', res);
+                    
+                    // 隐藏加载提示
+                    if (options.showLoading !== false) {
+                        uni.hideLoading();
+                    }
+                    
+                    if (res.statusCode === 200) {
+                        // 检查业务状态
+                        if (res.data && res.data.success !== false) {
+                            resolve(res.data);
+                        } else {
+                            const errorMsg = res.data?.message || '请求失败';
+                            console.error('新淘客API业务错误:', errorMsg);
+                            reject(new Error(errorMsg));
+                        }
+                    } else {
+                        const errorMsg = `HTTP错误: ${res.statusCode}`;
+                        console.error('新淘客API HTTP错误:', errorMsg);
+                        reject(new Error(errorMsg));
+                    }
+                },
+                fail: (error) => {
+                    console.error('新淘客API请求失败:', error);
+                    
+                    // 隐藏加载提示
+                    if (options.showLoading !== false) {
+                        uni.hideLoading();
+                    }
+                    
+                    let errorMsg = '网络请求失败';
+                    if (error.errMsg) {
+                        if (error.errMsg.includes('timeout')) {
+                            errorMsg = '请求超时，请检查网络';
+                        } else if (error.errMsg.includes('fail')) {
+                            errorMsg = '网络连接失败';
+                        }
+                    }
+                    
+                    reject(new Error(errorMsg));
+                }
+            });
+        });
+    },
+    
+    /**
+     * 智能商品搜索（支持平台区分）
+     * @param {Object} params 搜索参数
+     * @param {string} params.keyword 关键词搜索
+     * @param {number} params.platform 平台筛选：1淘宝，2京东，不传返回所有
+     * @param {number} params.page 页码，默认1
+     * @param {number} params.size 每页数量，默认20，最大100
+     * @param {number} params.min_commission 最低佣金比例
+     * @param {number} params.status 商品状态：1有效，0失效，默认1
+     */
+    searchProducts(params = {}) {
+        const queryParams = {
+            page: params.page || 1,
+            size: params.size || 20,
+            status: params.status || 1,
+            ...params
+        };
+        
+        // 移除空值参数
+        Object.keys(queryParams).forEach(key => {
+            if (queryParams[key] === undefined || queryParams[key] === '') {
+                delete queryParams[key];
+            }
+        });
+        
+        return this.request({
+            url: 'products',
+            method: 'GET',
+            data: queryParams,
+            showLoading: params.showLoading
+        });
+    },
+    
+    /**
+     * 获取全平台商品列表
+     * @param {Object} params 请求参数
+     */
+    getAllProducts(params = {}) {
+        const queryParams = {
+            page: params.page || 1,
+            page_size: params.page_size || 20,
+            ...params
+        };
+        
+        return this.request({
+            url: 'external/products/all',
+            method: 'GET',
+            data: queryParams,
+            showLoading: params.showLoading
+        });
+    },
+    
+    /**
+     * 获取淘宝商品列表
+     * @param {Object} params 请求参数
+     */
+    getTaobaoProducts(params = {}) {
+        const queryParams = {
+            page: params.page || 1,
+            page_size: params.page_size || 20,
+            ...params
+        };
+        
+        return this.request({
+            url: 'external/products/taobao',
+            method: 'GET',
+            data: queryParams,
+            showLoading: params.showLoading
+        });
+    },
+    
+    /**
+     * 获取京东商品列表
+     * @param {Object} params 请求参数
+     */
+    getJdProducts(params = {}) {
+        const queryParams = {
+            page: params.page || 1,
+            page_size: params.page_size || 20,
+            ...params
+        };
+        
+        return this.request({
+            url: 'external/products/jd',
+            method: 'GET',
+            data: queryParams,
+            showLoading: params.showLoading
+        });
+    },
+    
+    /**
+     * 单个商品转链
+     * @param {string} productId 商品ID
+     * @param {number} platform 平台类型：1淘宝，2京东
+     */
+    convertSingleProduct(productId, platform) {
+        return this.request({
+            url: `products/${productId}/convert?platform=${platform}`,
+            method: 'POST'
+        });
+    },
+    
+    /**
+     * 批量商品转链
+     * @param {Array} productIds 商品ID数组
+     * @param {number} platform 平台类型：1淘宝，2京东
+     */
+    convertBatchProducts(productIds, platform) {
+        return this.request({
+            url: 'products/convert/batch',
+            method: 'POST',
+            data: {
+                product_ids: productIds,
+                platform: platform
+            }
+        });
+    },
+    
+    /**
+     * 生成淘口令（淘宝专用）
+     * @param {string} productId 商品ID
+     */
+    generateTaokoling(productId) {
+        return this.request({
+            url: 'external/taobao/taokoling',
+            method: 'POST',
+            data: {
+                product_id: productId
+            }
+        });
+    },
+    
+    /**
+     * 生成京东短链（京东专用）
+     * @param {string} productId 商品ID
+     */
+    generateJdShortlink(productId) {
+        return this.request({
+            url: 'external/jd/shortlink',
+            method: 'POST',
+            data: {
+                product_id: productId
+            }
+        });
+    },
+    
+    /**
+     * 外部批量转换接口
+     * @param {Array} productIds 商品ID数组
+     * @param {number} platform 平台类型：1淘宝，2京东
+     */
+    batchConvertExternal(productIds, platform) {
+        return this.request({
+            url: 'external/convert/batch',
+            method: 'POST',
+            data: {
+                product_ids: productIds,
+                platform: platform
+            }
+        });
+    }
+};
+
+/**
+ * 新淘客工具函数
+ */
+const newTaokeUtils = {
+    
+    /**
+     * 获取平台名称
+     * @param {number} platformId 平台ID
+     */
+    getPlatformName(platformId) {
+        const platformNames = {
+            1: '淘宝',
+            2: '京东',
+            3: '拼多多'
+        };
+        return platformNames[platformId] || '未知平台';
+    },
+    
+    /**
+     * 格式化价格
+     * @param {number} price 价格
+     */
+    formatPrice(price) {
+        if (!price) return '0.00';
+        return parseFloat(price).toFixed(2);
+    },
+    
+    /**
+     * 格式化佣金比例
+     * @param {number} rate 佣金比例
+     */
+    formatCommissionRate(rate) {
+        if (!rate) return '0.0%';
+        return parseFloat(rate).toFixed(1) + '%';
+    },
+    
+    /**
+     * 计算优惠后价格
+     * @param {number} originalPrice 原价
+     * @param {number} couponAmount 优惠券金额
+     */
+    calculateDiscountPrice(originalPrice, couponAmount) {
+        const discountPrice = originalPrice - (couponAmount || 0);
+        return Math.max(discountPrice, 0);
+    },
+    
+    /**
+     * 生成商品分享文案
+     * @param {Object} goodsInfo 商品信息
+     * @param {Object} linkInfo 转链信息
+     */
+    generateShareText(goodsInfo, linkInfo) {
+        const platform = this.getPlatformName(goodsInfo.platform);
+        const price = this.formatPrice(goodsInfo.coupon_price || goodsInfo.price);
+        
+        if (goodsInfo.platform === NEW_TAOKE_CONFIG.platforms.TAOBAO) {
+            // 淘宝分享文案
+            return linkInfo.taobao_command || 
+                `【${platform}】【${price}元】${goodsInfo.title} ${linkInfo.short_url} ${linkInfo.taokoling}\n点击复制按钮后\n打开淘宝APP直接购买`;
+        } else if (goodsInfo.platform === NEW_TAOKE_CONFIG.platforms.JD) {
+            // 京东分享文案
+            return linkInfo.jd_command || 
+                `【${platform}】${linkInfo.short_url} 「${goodsInfo.title}」\n点击链接直接打开`;
+        }
+        
+        return `【${platform}】${goodsInfo.title} - ¥${price}`;
+    }
+};
+
+// 导出API对象
+const newTaokeApi = {
+    config: NEW_TAOKE_CONFIG,
+    request: newTaokeRequest,
+    utils: newTaokeUtils
+};
+
+export default newTaokeApi;

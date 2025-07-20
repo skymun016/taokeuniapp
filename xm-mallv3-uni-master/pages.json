@@ -251,7 +251,23 @@
 				}
 			}
 		}, {
-			"path": "pages/dataokeGoodsDetail/dataokeGoodsDetail",
+			"path": "pages/jdHotGoodsList/jdHotGoodsList",
+			"style": {
+				"backgroundColorTop": "#F7F7F7",
+				"backgroundColorBottom": "#F7F7F7",
+				"navigationBarTitleText": "京东热销",
+				"onReachBottomDistance": 50,
+				"enablePullDownRefresh": true,
+				"navigationStyle": "custom",
+				"app-plus": {
+					"bounce": "none"
+				},
+				"h5": {
+					"titleNView": false
+				}
+			}
+		}, {
+			"path": "pages/newGoodsDetail/newGoodsDetail",
 			"style": {
 				"backgroundColorTop": "#F7F7F7",
 				"backgroundColorBottom": "#F7F7F7",
@@ -265,11 +281,11 @@
 				}
 			}
 		}, {
-			"path": "pages/dataokeTest/dataokeTest",
+			"path": "pages/newTaokeTest/newTaokeTest",
 			"style": {
 				"backgroundColorTop": "#F7F7F7",
 				"backgroundColorBottom": "#F7F7F7",
-				"navigationBarTitleText": "大淘客测试",
+				"navigationBarTitleText": "新淘客API测试",
 				"app-plus": {
 					"bounce": "none"
 				},

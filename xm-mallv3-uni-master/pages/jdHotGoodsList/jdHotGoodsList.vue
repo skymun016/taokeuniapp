@@ -7,7 +7,7 @@
 					<tui-icon name="arrowleft" color="#000"></tui-icon>
 				</view>
 				<view class="tui-title-absolute" :style="{ marginTop: titleTop + 'px', width: width + 'px' }">
-					<text>淘宝商品</text>
+					<text>京东商品</text>
 				</view>
 			</view>
 		</view>
@@ -20,7 +20,7 @@
 				<input
 					class="tui-search-input"
 					type="text"
-					placeholder="搜索淘宝商品..."
+					placeholder="搜索京东商品..."
 					v-model="searchKeyword"
 					@confirm="onSearchConfirm"
 					@input="onSearchInput"
@@ -48,7 +48,7 @@
 
 						<!-- 商品图片 -->
 						<view class="tui-goods-image-wrapper">
-							<image :src="item.main_image || item.image || item.pic" class="tui-goods-image" mode="aspectFill" />
+							<image :src="item.main_image || item.image" class="tui-goods-image" mode="aspectFill" />
 
 							<!-- 优惠券标识 -->
 							<view v-if="item.coupon_amount > 0" class="tui-coupon-tag">
@@ -68,6 +68,12 @@
 									<text v-if="item.price > item.coupon_price" class="tui-price-original">
 										¥{{ formatPrice(item.price) }}
 									</text>
+								</view>
+
+								<!-- 佣金信息 -->
+								<view class="tui-commission-box">
+									<text class="tui-commission-rate">{{ formatCommissionRate(item.commission_rate) }}</text>
+									<text class="tui-commission-amount">赚{{ formatPrice(item.commission_amount) }}</text>
 								</view>
 							</view>
 
@@ -142,12 +148,12 @@ export default {
 		// 加载商品列表
 		this.loadGoodsList();
 	},
-
+	
 	onReachBottom() {
 		// 加载更多
 		this.loadMoreGoods();
 	},
-
+	
 	onPullDownRefresh() {
 		// 下拉刷新
 		this.refresh();
@@ -159,7 +165,7 @@ export default {
 			clearTimeout(this.searchTimer);
 		}
 	},
-	
+
 	methods: {
 		/**
 		 * 获取系统信息
@@ -167,13 +173,13 @@ export default {
 		getSystemInfo() {
 			const systemInfo = uni.getSystemInfoSync();
 			this.width = systemInfo.windowWidth;
-			
+
 			// #ifdef MP-WEIXIN
 			this.height = systemInfo.statusBarHeight + 44;
 			this.arrowTop = systemInfo.statusBarHeight + 10;
 			this.titleTop = systemInfo.statusBarHeight + 13;
 			// #endif
-			
+
 			// #ifdef H5
 			this.height = 44;
 			this.arrowTop = 10;
@@ -222,7 +228,7 @@ export default {
 		 * 执行搜索
 		 */
 		performSearch() {
-			console.log('执行搜索，关键词:', this.searchKeyword);
+			console.log('执行京东商品搜索，关键词:', this.searchKeyword);
 			this.currentPage = 1;
 			this.goodsList = [];
 			this.hasMore = true;
@@ -231,10 +237,6 @@ export default {
 
 
 
-
-
-
-		
 		/**
 		 * 加载商品列表
 		 */
@@ -248,7 +250,7 @@ export default {
 				const params = {
 					page: 1,
 					size: this.pageSize,
-					platform: newTaokeApi.config.platforms.TAOBAO, // 只获取淘宝商品
+					platform: newTaokeApi.config.platforms.JD, // 只获取京东商品
 					showLoading: false
 				};
 
@@ -257,7 +259,7 @@ export default {
 					params.keyword = this.searchKeyword.trim();
 				}
 
-				console.log('调用淘宝商品搜索API，参数:', params);
+				console.log('调用京东商品搜索API，参数:', params);
 
 				// 使用搜索API而不是列表API，支持更多筛选功能
 				const result = await newTaokeApi.request.searchProducts(params);
@@ -271,7 +273,7 @@ export default {
 					this.currentPage = 1;
 					this.hasMore = result.page < result.pages;
 
-					console.log('淘宝商品列表加载成功:', this.goodsList.length, '个商品');
+					console.log('京东商品列表加载成功:', this.goodsList.length, '个商品');
 				} else {
 					console.warn('API返回数据格式异常:', result);
 					this.goodsList = [];
@@ -279,7 +281,7 @@ export default {
 				}
 				
 			} catch (error) {
-				console.error('加载淘宝商品列表失败:', error);
+				console.error('加载京东商品列表失败:', error);
 
 				// 显示错误信息
 				let errorMessage = '加载失败';
@@ -307,6 +309,8 @@ export default {
 		},
 
 
+
+
 		
 		/**
 		 * 加载更多商品
@@ -321,7 +325,7 @@ export default {
 				const params = {
 					page: this.currentPage + 1,
 					size: this.pageSize,
-					platform: newTaokeApi.config.platforms.TAOBAO,
+					platform: newTaokeApi.config.platforms.JD,
 					showLoading: false
 				};
 
@@ -346,7 +350,7 @@ export default {
 				}
 
 			} catch (error) {
-				console.error('加载更多淘宝商品失败:', error);
+				console.error('加载更多京东商品失败:', error);
 				uni.showToast({
 					title: '加载失败',
 					icon: 'none'
@@ -364,21 +368,20 @@ export default {
 			this.currentPage = 1;
 			this.hasMore = true;
 			this.loadGoodsList();
-			this.getStats();
 		},
 		
 		/**
 		 * 跳转到商品详情
 		 */
 		goToDetail(goods) {
-			console.log('跳转淘宝商品详情：', goods.product_id, goods);
+			console.log('跳转京东商品详情：', goods.product_id, goods);
 
 			// 将完整的商品信息存储到全局状态中
 			uni.setStorageSync('currentGoodsInfo', goods);
 
-			// 直接跳转到新的商品详情页面，传递必要参数
+			// 直接跳转到新的商品详情页面
 			uni.navigateTo({
-				url: `/pages/newGoodsDetail/newGoodsDetail?product_id=${goods.product_id}&platform=1`
+				url: `/pages/newGoodsDetail/newGoodsDetail?product_id=${goods.product_id}&platform=2`
 			});
 		},
 
@@ -398,7 +401,12 @@ export default {
 			return newTaokeApi.utils.formatPrice(price);
 		},
 
-
+		/**
+		 * 格式化佣金比例
+		 */
+		formatCommissionRate(rate) {
+			return newTaokeApi.utils.formatCommissionRate(rate);
+		},
 
 		/**
 		 * 格式化销量
@@ -425,7 +433,7 @@ export default {
 
 <style scoped>
 .container {
-	background: #f7f7f7;
+	background-color: #f5f5f5;
 	min-height: 100vh;
 }
 
@@ -507,7 +515,7 @@ export default {
 }
 
 .tui-search-btn {
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
 	color: #fff;
 	padding: 0 32rpx;
 	height: 72rpx;
@@ -524,49 +532,42 @@ export default {
 
 
 /* 商品列表样式 */
-.tui-goods-container {
-	padding: 0 20rpx;
+.tui-goods-list {
+	padding: 10rpx 20rpx 20rpx 20rpx;
 }
 
-/* 两列网格布局 */
+/* 商品网格布局 */
 .tui-goods-grid {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: space-between;
 }
 
-.tui-goods-item {
-	background: #fff;
+.tui-goods-item-grid {
+	width: 48%;
+	background-color: #fff;
 	border-radius: 12rpx;
 	margin-bottom: 20rpx;
 	overflow: hidden;
 	box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.08);
 }
 
-/* 网格模式下的商品项 */
-.tui-goods-item-grid {
-	width: 48%;
-	margin-bottom: 20rpx;
-}
-
 .tui-hover {
-	background: #f5f5f5;
+	transform: scale(0.98);
+	transition: transform 0.2s;
 }
 
+/* 商品图片样式 */
 .tui-goods-image-wrapper {
 	position: relative;
 	width: 100%;
-	height: 300rpx;
-}
-
-/* 网格模式下的图片高度 */
-.tui-goods-item-grid .tui-goods-image-wrapper {
-	height: 250rpx;
+	height: 280rpx;
 }
 
 .tui-goods-image {
 	width: 100%;
 	height: 100%;
+	border-radius: 12rpx 12rpx 0 0;
 }
 
 
@@ -576,7 +577,7 @@ export default {
 	position: absolute;
 	top: 16rpx;
 	right: 16rpx;
-	background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+	background: linear-gradient(135deg, #ff6b35, #f7931e);
 	color: #fff;
 	padding: 6rpx 12rpx;
 	border-radius: 20rpx;
@@ -584,89 +585,103 @@ export default {
 	font-weight: bold;
 }
 
-
-
 /* 商品内容样式 */
 .tui-goods-content {
-	padding: 24rpx;
+	padding: 16rpx;
 }
 
 .tui-goods-title {
-	font-size: 28rpx;
+	font-size: 24rpx;
 	color: #333;
-	line-height: 1.4;
-	margin-bottom: 16rpx;
-	display: -webkit-box;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
+	line-height: 1.3;
+	height: 62rpx;
 	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	margin-bottom: 12rpx;
 }
 
 /* 价格样式 */
 .tui-price-box {
-	margin-bottom: 16rpx;
+	margin-bottom: 12rpx;
 }
 
 .tui-price-main {
 	display: flex;
 	align-items: baseline;
-	margin-bottom: 8rpx;
 }
 
 .tui-price-symbol {
-	font-size: 24rpx;
-	color: #e41f19;
-	font-weight: bold;
+	font-size: 20rpx;
+	color: #ff4142;
+	font-weight: 600;
 }
 
 .tui-price-num {
-	font-size: 36rpx;
-	color: #e41f19;
-	font-weight: bold;
-	margin-left: 4rpx;
+	font-size: 32rpx;
+	color: #ff4142;
+	font-weight: 600;
+	margin-right: 8rpx;
 }
 
 .tui-price-original {
-	font-size: 24rpx;
+	font-size: 20rpx;
 	color: #999;
 	text-decoration: line-through;
-	margin-left: 16rpx;
 }
 
-.tui-coupon-info {
+/* 佣金信息样式 */
+.tui-commission-box {
+	display: flex;
+	align-items: center;
+	gap: 12rpx;
 	margin-top: 8rpx;
 }
 
-.tui-coupon-text {
-	background: #fff2f0;
-	color: #e41f19;
-	font-size: 22rpx;
-	padding: 4rpx 12rpx;
-	border-radius: 8rpx;
-	border: 1px solid #ffccc7;
+.tui-commission-rate {
+	background: linear-gradient(135deg, #ff6b35, #f7931e);
+	color: #fff;
+	font-size: 20rpx;
+	padding: 4rpx 8rpx;
+	border-radius: 6rpx;
+	font-weight: bold;
 }
 
-/* 商品元信息样式 */
+.tui-commission-amount {
+	background: #fff2e8;
+	color: #ff6b35;
+	font-size: 20rpx;
+	padding: 4rpx 8rpx;
+	border-radius: 6rpx;
+	font-weight: bold;
+}
+
+
+
+/* 商品元信息 */
 .tui-goods-meta {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	font-size: 24rpx;
+	font-size: 20rpx;
 	color: #999;
 }
 
 .tui-sales {
-	color: #666;
+	color: #999;
+	flex: 1;
 }
 
 .tui-shop {
-	max-width: 200rpx;
+	max-width: 120rpx;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	color: #666;
 }
 
-/* 加载状态样式 */
+/* 加载状态 */
 .tui-loading {
 	display: flex;
 	flex-direction: column;
@@ -683,7 +698,7 @@ export default {
 	font-size: 28rpx;
 }
 
-/* 空状态样式 */
+/* 空状态 */
 .tui-empty {
 	display: flex;
 	flex-direction: column;
@@ -694,7 +709,8 @@ export default {
 .tui-empty-image {
 	width: 200rpx;
 	height: 200rpx;
-	margin-bottom: 40rpx;
+	margin-bottom: 30rpx;
+	opacity: 0.5;
 }
 
 .tui-empty-text {
@@ -704,10 +720,10 @@ export default {
 }
 
 .tui-empty-btn {
-	background: #e41f19;
+	background-color: #ff6b35;
 	color: #fff;
-	padding: 16rpx 40rpx;
-	border-radius: 40rpx;
+	padding: 20rpx 40rpx;
+	border-radius: 50rpx;
 	font-size: 28rpx;
 }
 </style>
