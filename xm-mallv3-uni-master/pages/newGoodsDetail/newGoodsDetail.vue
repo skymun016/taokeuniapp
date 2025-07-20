@@ -778,31 +778,35 @@ export default {
 			uni.showModal({
 				title: '淘口令',
 				content: displayContent,
-				confirmText: '复制文案',
-				cancelText: '复制详情',
+				confirmText: '复制',
+				cancelText: '关闭',
 				showCancel: true,
 				success: (res) => {
-					console.log('🎪 弹窗用户操作:', res.confirm ? '确认' : '取消');
-					const textToCopy = res.confirm ? promoContent : fullContent;
-					console.log('📋 准备复制内容长度:', textToCopy.length);
+					console.log('🎪 弹窗用户操作:', res.confirm ? '复制' : '关闭');
+					if (res.confirm) {
+						// 用户点击复制按钮，复制推广文案
+						const textToCopy = promoContent;
+						console.log('📋 准备复制内容长度:', textToCopy.length);
 
-					uni.setClipboardData({
-						data: textToCopy,
-						success: () => {
-							console.log('✅ 内容复制成功');
-							uni.showToast({
-								title: res.confirm ? '文案已复制' : '详情已复制',
-								icon: 'success'
-							});
-						},
-						fail: (error) => {
-							console.error('❌ 复制失败:', error);
-							uni.showToast({
-								title: '复制失败，请重试',
-								icon: 'none'
-							});
-						}
-					});
+						uni.setClipboardData({
+							data: textToCopy,
+							success: () => {
+								console.log('✅ 内容复制成功');
+								uni.showToast({
+									title: '文案已复制',
+									icon: 'success'
+								});
+							},
+							fail: (error) => {
+								console.error('❌ 复制失败:', error);
+								uni.showToast({
+									title: '复制失败，请重试',
+									icon: 'none'
+								});
+							}
+						});
+					}
+					// 用户点击关闭按钮，不执行任何操作
 				},
 				fail: (error) => {
 					console.error('❌ 弹窗显示失败:', error);
@@ -877,20 +881,31 @@ export default {
 			uni.showModal({
 				title: '京东商品转链成功',
 				content: fullContent,
-				confirmText: '复制文案',
-				cancelText: '复制链接',
+				confirmText: '复制',
+				cancelText: '关闭',
 				showCancel: true,
 				success: (res) => {
-					const textToCopy = res.confirm ? promoContent : (data.short_url || data.shortUrl || '');
-					uni.setClipboardData({
-						data: textToCopy,
-						success: () => {
-							uni.showToast({
-								title: res.confirm ? '文案已复制' : '链接已复制',
-								icon: 'success'
-							});
-						}
-					});
+					if (res.confirm) {
+						// 用户点击复制按钮，复制推广文案
+						const textToCopy = promoContent;
+						uni.setClipboardData({
+							data: textToCopy,
+							success: () => {
+								uni.showToast({
+									title: '文案已复制',
+									icon: 'success'
+								});
+							},
+							fail: (error) => {
+								console.error('❌ 复制失败:', error);
+								uni.showToast({
+									title: '复制失败，请重试',
+									icon: 'none'
+								});
+							}
+						});
+					}
+					// 用户点击关闭按钮，不执行任何操作
 				}
 			});
 		},
@@ -944,7 +959,7 @@ export default {
 				// 使用完整的淘宝口令格式，但格式化使用提示为两行显示
 				resultText = data.taobao_command;
 
-				// 格式化使用提示：确保"点击复制按钮后 打开淘宝APP直接购买"显示为两行
+				// 格式化使用提示：确保"点击复制按钮后 打开助手并粘贴发送"显示为两行
 				resultText = this.formatUsageTip(resultText);
 			} else if (data.taokouling) {
 				resultText += `📱 淘口令：${data.taokouling}\n`;
@@ -959,7 +974,7 @@ export default {
 				}
 
 				// 添加格式化的使用提示
-				resultText += '\n点击复制按钮后\n打开淘宝APP直接购买';
+				resultText += '\n点击复制按钮后\n打开助手并粘贴发送';
 			}
 
 			// 构建推广文案
@@ -989,7 +1004,7 @@ export default {
 				}
 
 				// 添加格式化的使用提示
-				copyText += '\n点击复制按钮后\n打开淘宝APP直接购买';
+				copyText += '\n点击复制按钮后\n打开助手并粘贴发送';
 			}
 
 			return {
@@ -1095,19 +1110,21 @@ export default {
 
 			// 匹配各种可能的使用提示格式并替换为标准的两行格式
 			const patterns = [
-				// 匹配 "点击复制按钮后 打开淘宝APP直接购买" (一行格式)
+				// 匹配旧的淘宝APP提示格式
 				/点击复制按钮后\s+打开淘宝APP直接购买/g,
-				// 匹配 "点击复制按钮后打开淘宝APP直接购买" (无空格)
 				/点击复制按钮后打开淘宝APP直接购买/g,
-				// 匹配已经是两行但可能有多余空格的格式
-				/点击复制按钮后\s*\n\s*打开淘宝APP直接购买/g
+				/点击复制按钮后\s*\n\s*打开淘宝APP直接购买/g,
+				// 匹配新的助手提示格式
+				/点击复制按钮后\s+打开助手并粘贴发送/g,
+				/点击复制按钮后打开助手并粘贴发送/g,
+				/点击复制按钮后\s*\n\s*打开助手并粘贴发送/g
 			];
 
 			let formattedText = text;
 
 			// 替换所有匹配的模式为标准的两行格式
 			patterns.forEach(pattern => {
-				formattedText = formattedText.replace(pattern, '点击复制按钮后\n打开淘宝APP直接购买');
+				formattedText = formattedText.replace(pattern, '点击复制按钮后\n打开助手并粘贴发送');
 			});
 
 			return formattedText;
