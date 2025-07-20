@@ -837,50 +837,33 @@ export default {
 		// 调试：输出完整的API响应数据
 		console.log('完整的API响应数据:', JSON.stringify(data, null, 2));
 
-			// 生成购买文案
-			const fullContent = this.generateJdContent(data.short_url || data.shortUrl || '');
-			
-			// 构建推广文案
+			// 构建简洁的推广文案（类似淘宝淘口令格式）
 			const title = data.title || this.goodsInfo.title || '京东好物';
-			let promoContent = `🔥【京东好物】${title}\n\n`;
-			
-			// 价格信息
 			const price = this.formatPrice(data.coupon_price || data.price || this.goodsInfo.coupon_price || this.goodsInfo.price);
-			const originalPrice = this.formatPrice(data.price || this.goodsInfo.price);
-			
-			promoContent += `💰 到手价：¥${price}`;
-			if (data.coupon_price && data.coupon_price < data.price) {
-				promoContent += `（原价¥${originalPrice}）`;
-			}
-			promoContent += '\n';
-			
-			// 优惠券信息
-			if (data.coupon_info || (data.coupon_price && data.price)) {
-				promoContent += `🎫 ${data.coupon_info || `${parseFloat(data.price) - parseFloat(data.coupon_price)}元券`}\n`;
-			}
-			
-			// 店铺名称
-			promoContent += `🏪 ${data.shop_name || this.goodsInfo.shop_name || ''}\n`;
-			
-			// 销量
-			if (data.sales_volume || this.goodsInfo.sales_volume) {
-				promoContent += `📊 已售${data.sales_volume || this.goodsInfo.sales_volume}+件\n`;
-			}
-			
-			// 购买链接或口令
-			promoContent += '\n📱 复制这条信息，打开👉京东APP👈即可购买\n';
-			
-			// 优先使用京东口令
-			if (data.jd_command) {
-				promoContent += `${data.jd_command}`;
-			} else if (data.short_url || data.shortUrl) {
+
+			// 简洁的推广文案 - 只使用短链接，不使用完整的京东口令
+			let promoContent = `【京东】【${price}元】${title} `;
+
+			// 只使用短链接，避免重复内容
+			if (data.short_url || data.shortUrl) {
 				promoContent += `${data.short_url || data.shortUrl}`;
+			} else if (data.jd_command) {
+				// 如果没有短链接，从京东口令中提取链接部分
+				const urlMatch = data.jd_command.match(/https?:\/\/[^\s]+/);
+				if (urlMatch) {
+					promoContent += urlMatch[0];
+				} else {
+					promoContent += data.jd_command;
+				}
 			}
+
+			// 添加使用提示
+			promoContent += '\n点击复制按钮后\n打开助手并粘贴发送';
 
 			// 显示弹窗，提供复制选项
 			uni.showModal({
-				title: '京东商品转链成功',
-				content: fullContent,
+				title: '京东转链',
+				content: promoContent,
 				confirmText: '复制',
 				cancelText: '关闭',
 				showCancel: true,
@@ -1019,55 +1002,8 @@ export default {
 	 * @returns {string} 京东商品购买文案
 	 */
 	generateJdContent(shortUrl) {
-		// 商品信息
-		const title = this.goodsInfo.title || this.goodsInfo.short_title || '精选好物';
-		const price = this.formatPrice(this.goodsInfo.coupon_price || this.goodsInfo.price);
-		const originalPrice = this.formatPrice(this.goodsInfo.price);
-		const couponAmount = this.goodsInfo.coupon_amount ? 
-			`【${this.formatPrice(this.goodsInfo.coupon_amount)}元券】` : '';
-		
-		// 构建完整内容
-		let resultText = `🎉 京东商品转链成功！\n\n`;
-		resultText += `📦 商品：${title}\n`;
-		resultText += `🏪 店铺：${this.goodsInfo.shop_name || '未知店铺'}\n`;
-		resultText += `💰 价格：¥${originalPrice}`;
-		
-		// 券后价
-		if (this.goodsInfo.coupon_price && this.goodsInfo.coupon_price < this.goodsInfo.price) {
-			resultText += ` → ¥${price}（券后价）`;
-		}
-		resultText += `\n`;
-
-		// 佣金信息
-		if (this.goodsInfo.commission_rate) {
-			const rate = parseFloat(this.goodsInfo.commission_rate);
-			if (!isNaN(rate) && rate > 0) {
-				const commission = (parseFloat(this.goodsInfo.coupon_price || this.goodsInfo.price) * rate / 100).toFixed(2);
-				resultText += `💎 佣金：${rate}%（约¥${commission}）\n`;
-			}
-		}
-
-		// 优惠券信息
-		if (couponAmount) {
-			resultText += `🎫 优惠券：${this.formatPrice(this.goodsInfo.coupon_amount)}元券\n`;
-		}
-
-		// 销量
-		if (this.goodsInfo.sales_volume) {
-			resultText += `📊 销量：${this.goodsInfo.sales_volume}+\n`;
-		}
-
-		resultText += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-
-		// 商品链接
-		if (shortUrl) {
-			resultText += `🔗 商品链接：${shortUrl}\n`;
-		}
-
-		// 添加操作提示
-		resultText += '\n📱 复制链接，打开「京东APP」直接购买';
-		
-		return resultText;
+		// 此方法已不再使用，京东转链现在使用简洁格式
+		return '';
 		},
 
 		/**
@@ -1503,15 +1439,19 @@ export default {
 .tui-helper-btn {
 	flex: 1;
 	border-radius: 50rpx;
-	padding: 20rpx 30rpx;
+	padding: 0;
+	height: 88rpx;
 	text-align: center;
 	border: none;
-	font-size: 28rpx;
+	font-size: 30rpx;
 	font-weight: bold;
 	color: #fff;
 	background: none;
 	margin: 0;
-	line-height: 1;
+	line-height: 88rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 /* 淘宝助手按钮样式 */
@@ -1521,7 +1461,7 @@ export default {
 
 /* 京东助手按钮样式 */
 .tui-helper-2 {
-	background: linear-gradient(135deg, #e93323, #ed4014);
+	background: linear-gradient(135deg, #007acc, #0099ff);
 }
 
 /* 默认助手按钮样式 */
@@ -1531,8 +1471,9 @@ export default {
 
 .tui-helper-text {
 	color: #fff;
-	font-size: 28rpx;
+	font-size: 30rpx;
 	font-weight: bold;
+	line-height: 1;
 }
 
 /* 立即购买按钮 */
@@ -1540,18 +1481,23 @@ export default {
 	flex: 1;
 	background: linear-gradient(135deg, #e41f19, #ff6034);
 	border-radius: 50rpx;
-	padding: 20rpx 30rpx;
+	padding: 0;
+	height: 88rpx;
 	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .tui-buy-btn.tui-loading {
-	background: #ccc;
+	background: linear-gradient(135deg, #ccc, #ddd);
 }
 
 .tui-buy-text {
 	color: #fff;
-	font-size: 28rpx;
+	font-size: 30rpx;
 	font-weight: bold;
+	line-height: 1;
 }
 
 /* 加载状态 */
