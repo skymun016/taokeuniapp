@@ -73,8 +73,11 @@
 
 							<!-- 销量和店铺信息 -->
 							<view class="tui-goods-meta">
-								<text v-if="item.sales_volume > 0" class="tui-sales">
-									{{ formatSaleCount(item.sales_volume) }}人付款
+								<text v-if="item.sales_volume > 0" class="tui-sales" style="color: #ff6b35;">
+									销量：{{ formatSaleCount(item.sales_volume) }}+
+								</text>
+								<text v-else class="tui-sales" style="color: #ff6b35;">
+									销量：0
 								</text>
 								<text v-if="item.shop_name" class="tui-shop">
 									{{ item.shop_name }}
@@ -655,9 +658,7 @@ export default {
 	color: #999;
 }
 
-.tui-sales {
-	color: #666;
-}
+/* 销量颜色通过内联样式设置为橙色 #ff6b35 */
 
 .tui-shop {
 	max-width: 200rpx;

@@ -69,18 +69,15 @@
 										¥{{ formatPrice(item.price) }}
 									</text>
 								</view>
-
-								<!-- 佣金信息 -->
-								<view class="tui-commission-box">
-									<text class="tui-commission-rate">{{ formatCommissionRate(item.commission_rate) }}</text>
-									<text class="tui-commission-amount">赚{{ formatPrice(item.commission_amount) }}</text>
-								</view>
 							</view>
 
 							<!-- 销量和店铺信息 -->
 							<view class="tui-goods-meta">
-								<text v-if="item.sales_volume > 0" class="tui-sales">
-									{{ formatSaleCount(item.sales_volume) }}人付款
+								<text v-if="item.sales_volume > 0" class="tui-sales" style="color: #ff6b35;">
+									销量：{{ formatSaleCount(item.sales_volume) }}+
+								</text>
+								<text v-else class="tui-sales" style="color: #ff6b35;">
+									销量：0
 								</text>
 								<text v-if="item.shop_name" class="tui-shop">
 									{{ item.shop_name }}
@@ -344,6 +341,16 @@ export default {
 					this.currentPage++;
 					this.hasMore = result.page < result.pages;
 
+					// 调试：查看加载更多的商品数据
+					console.log(`加载更多京东商品成功，第${this.currentPage}页:`, newGoods.length, '个商品');
+					if (newGoods.length > 0) {
+						console.log('加载更多商品示例数据:', {
+							product_id: newGoods[0].product_id,
+							title: newGoods[0].title?.substring(0, 30) + '...',
+							sales_volume: newGoods[0].sales_volume,
+							shop_name: newGoods[0].shop_name
+						});
+					}
 
 				} else {
 					this.hasMore = false;
@@ -401,12 +408,7 @@ export default {
 			return newTaokeApi.utils.formatPrice(price);
 		},
 
-		/**
-		 * 格式化佣金比例
-		 */
-		formatCommissionRate(rate) {
-			return newTaokeApi.utils.formatCommissionRate(rate);
-		},
+
 
 		/**
 		 * 格式化销量
@@ -631,31 +633,7 @@ export default {
 	text-decoration: line-through;
 }
 
-/* 佣金信息样式 */
-.tui-commission-box {
-	display: flex;
-	align-items: center;
-	gap: 12rpx;
-	margin-top: 8rpx;
-}
 
-.tui-commission-rate {
-	background: linear-gradient(135deg, #ff6b35, #f7931e);
-	color: #fff;
-	font-size: 20rpx;
-	padding: 4rpx 8rpx;
-	border-radius: 6rpx;
-	font-weight: bold;
-}
-
-.tui-commission-amount {
-	background: #fff2e8;
-	color: #ff6b35;
-	font-size: 20rpx;
-	padding: 4rpx 8rpx;
-	border-radius: 6rpx;
-	font-weight: bold;
-}
 
 
 
@@ -669,7 +647,7 @@ export default {
 }
 
 .tui-sales {
-	color: #999;
+	/* 销量颜色通过内联样式设置为橙色 #ff6b35 */
 	flex: 1;
 }
 
