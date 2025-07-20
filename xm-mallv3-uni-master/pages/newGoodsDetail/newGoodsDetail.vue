@@ -66,17 +66,21 @@
 					</view>
 				</view>
 
-				<!-- 优惠券信息 - 简洁样式 -->
+				<!-- 优惠券信息 - 金额+门槛样式 -->
 				<view class="tui-coupon-section" v-if="hasCoupon">
 					<view class="tui-coupon-simple">
-						<!-- 优先显示具体优惠券金额 -->
-						<text class="tui-coupon-text" v-if="goodsInfo.coupon_amount && goodsInfo.coupon_amount > 0">¥{{ formatPrice(goodsInfo.coupon_amount) }}</text>
-						<!-- 其次显示优惠券信息 -->
-						<text class="tui-coupon-text" v-else-if="goodsInfo.coupon_info && goodsInfo.coupon_info !== '满0元减0元'">{{ goodsInfo.coupon_info }}</text>
-						<!-- 最后根据价格差计算优惠券金额 -->
-						<text class="tui-coupon-text" v-else-if="goodsInfo.coupon_price && goodsInfo.price && goodsInfo.coupon_price < goodsInfo.price">¥{{ formatPrice(goodsInfo.price - goodsInfo.coupon_price) }}</text>
-						<!-- 默认显示 -->
-						<text class="tui-coupon-text" v-else>优惠券</text>
+						<view class="tui-coupon-content">
+							<!-- 优惠券金额 -->
+							<text class="tui-coupon-amount" v-if="goodsInfo.coupon_amount && goodsInfo.coupon_amount > 0">¥{{ formatPrice(goodsInfo.coupon_amount) }}</text>
+							<text class="tui-coupon-amount" v-else-if="goodsInfo.coupon_price && goodsInfo.price && goodsInfo.coupon_price < goodsInfo.price">¥{{ formatPrice(goodsInfo.price - goodsInfo.coupon_price) }}</text>
+							<text class="tui-coupon-amount" v-else>优惠券</text>
+
+							<!-- 使用门槛 -->
+							<text class="tui-coupon-condition" v-if="goodsInfo.coupon_condition && goodsInfo.coupon_condition > 0">满{{ formatPrice(goodsInfo.coupon_condition) }}可用</text>
+							<text class="tui-coupon-condition" v-else-if="goodsInfo.coupon_info && goodsInfo.coupon_info !== '满0元减0元'">{{ goodsInfo.coupon_info }}</text>
+							<text class="tui-coupon-condition" v-else-if="goodsInfo.coupon_amount && goodsInfo.coupon_amount > 0">无门槛</text>
+							<text class="tui-coupon-condition" v-else>立即领取</text>
+						</view>
 					</view>
 				</view>
 
@@ -1315,7 +1319,7 @@ export default {
 	margin-left: 20rpx;
 }
 
-/* 优惠券信息 - 简洁样式 */
+/* 优惠券信息 - 金额+门槛样式 */
 .tui-coupon-section {
 	margin-bottom: 30rpx;
 }
@@ -1331,11 +1335,23 @@ export default {
 	border: 2rpx solid rgba(255,255,255,0.2);
 }
 
-.tui-coupon-text {
+.tui-coupon-content {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 20rpx;
+}
+
+.tui-coupon-amount {
 	color: #fff;
 	font-size: 32rpx;
 	font-weight: 700;
-	text-align: center;
+}
+
+.tui-coupon-condition {
+	color: rgba(255,255,255,0.9);
+	font-size: 24rpx;
+	font-weight: 500;
 }
 
 /* 商品信息 */
