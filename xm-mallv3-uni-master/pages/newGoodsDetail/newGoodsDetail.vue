@@ -736,48 +736,57 @@ export default {
 		console.log('📋 完整的API响应数据:', JSON.stringify(data, null, 2));
 
 		try {
-			// 生成购买文案
-			console.log('📝 开始生成淘宝购买文案...');
-			const contentData = {
-				...data,
-				title: data.title || this.goodsInfo.title,
-				shop_name: data.shop_name || this.goodsInfo.shop_name,
-				price: data.price || this.goodsInfo.price,
-				coupon_price: data.coupon_price || this.goodsInfo.coupon_price,
-				coupon_amount: data.coupon_amount || this.goodsInfo.coupon_amount,
-				commission_rate: data.commission_rate || this.goodsInfo.commission_rate,
-				sales_volume: data.sales_volume || this.goodsInfo.sales_volume,
-				taokouling: data.taokouling || data.taoKouLing || '',
-				short_url: data.short_url || data.shortUrl || '',
-				short_url2: data.short_url2 || data.shortUrl2 || '',
-				item_url: data.item_url || data.itemUrl || data.url || '',
-				coupon_click_url: data.coupon_click_url || data.couponClickUrl || ''
-			};
+			// 构建简洁的推广文案（类似京东处理方式）
+			const title = data.title || this.goodsInfo.title || '淘宝好物';
+			const price = this.formatPrice(data.coupon_price || data.price || this.goodsInfo.coupon_price || this.goodsInfo.price);
 
-			console.log('🔧 文案生成数据:', contentData);
-			const { fullContent, promoContent } = this.generateTaobaoContent(contentData);
+			// 简洁的推广文案
+			let promoContent = '';
 
-			console.log('✅ 文案生成完成');
-			console.log('📄 完整内容长度:', fullContent.length);
-			console.log('📄 推广内容长度:', promoContent.length);
+			// 如果有完整的淘宝口令，直接使用
+			if (data.taobao_command) {
+				promoContent = data.taobao_command;
 
-			// 检查内容是否过长（uni.showModal 有内容长度限制）
-			const maxContentLength = 1000; // 设置最大内容长度
-			let displayContent = fullContent;
+				// 清理旧的使用提示，避免重复显示
+				const oldTipPatterns = [
+					/点击复制按钮后\s*\n\s*打开淘宝APP直接购买/g,
+					/点击复制按钮后\s+打开淘宝APP直接购买/g,
+					/点击复制按钮后打开淘宝APP直接购买/g,
+					/点击复制按钮后\s*\n\s*打开助手并粘贴发送/g,
+					/点击复制按钮后\s+打开助手并粘贴发送/g,
+					/点击复制按钮后打开助手并粘贴发送/g
+				];
 
-			if (fullContent.length > maxContentLength) {
-				console.log('⚠️ 内容过长，进行截取处理');
-				displayContent = fullContent.substring(0, maxContentLength) + '...\n\n点击按钮复制完整内容';
+				// 移除所有旧的使用提示
+				oldTipPatterns.forEach(pattern => {
+					promoContent = promoContent.replace(pattern, '');
+				});
+
+				// 清理可能的多余换行符
+				promoContent = promoContent.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+			}
+			// 如果有淘口令，构建简单格式
+			else if (data.taokouling || data.taoKouLing) {
+				promoContent = `【淘宝】【${price}元】${title}\n${data.taokouling || data.taoKouLing}`;
+			}
+			// 其他情况，构建基本格式
+			else {
+				promoContent = `【淘宝】【${price}元】${title}`;
+				if (data.short_url || data.shortUrl) {
+					promoContent += `\n${data.short_url || data.shortUrl}`;
+				}
 			}
 
-			console.log('🎪 准备显示系统弹窗...');
-			console.log('🎪 弹窗标题: 淘口令转换成功');
-			console.log('🎪 弹窗内容预览:', displayContent.substring(0, 100) + '...');
+			// 在"点击复制按钮后"上方添加两行内容
+			promoContent += '\n更多优惠\nhttps://s.click.taobao.com/geyPIIr\n点击复制按钮后\n打开助手并粘贴发送';
+
+			console.log('✅ 淘宝文案生成完成');
+			console.log('📄 推广内容长度:', promoContent.length);
 
 			// 显示系统弹窗，提供复制选项
 			uni.showModal({
 				title: '淘口令',
-				content: displayContent,
+				content: promoContent,
 				confirmText: '复制',
 				cancelText: '关闭',
 				showCancel: true,
@@ -785,11 +794,8 @@ export default {
 					console.log('🎪 弹窗用户操作:', res.confirm ? '复制' : '关闭');
 					if (res.confirm) {
 						// 用户点击复制按钮，复制推广文案
-						const textToCopy = promoContent;
-						console.log('📋 准备复制内容长度:', textToCopy.length);
-
 						uni.setClipboardData({
-							data: textToCopy,
+							data: promoContent,
 							success: () => {
 								console.log('✅ 内容复制成功');
 								uni.showToast({
@@ -857,8 +863,8 @@ export default {
 				}
 			}
 
-			// 添加使用提示
-			promoContent += '\n点击复制按钮后\n打开助手并粘贴发送';
+			// 添加更多优惠信息和使用提示
+			promoContent += '\n更多优惠\nhttps://u.jd.com/2GNR2c2\n点击复制按钮后\n打开助手并粘贴发送';
 
 			// 显示弹窗，提供复制选项
 			uni.showModal({
@@ -956,8 +962,8 @@ export default {
 					resultText += `🔗 商品链接：${data.item_url}\n`;
 				}
 
-				// 添加格式化的使用提示
-				resultText += '\n点击复制按钮后\n打开助手并粘贴发送';
+				// 添加更多优惠信息和格式化的使用提示
+				resultText += '\n更多优惠\nhttps://s.click.taobao.com/geyPIIr\n点击复制按钮后\n打开助手并粘贴发送';
 			}
 
 			// 构建推广文案
@@ -986,8 +992,8 @@ export default {
 					copyText += `${data.taokouling}`;
 				}
 
-				// 添加格式化的使用提示
-				copyText += '\n点击复制按钮后\n打开助手并粘贴发送';
+				// 添加更多优惠信息和格式化的使用提示
+				copyText += '\n更多优惠\nhttps://s.click.taobao.com/geyPIIr\n点击复制按钮后\n打开助手并粘贴发送';
 			}
 
 			return {
@@ -1044,7 +1050,29 @@ export default {
 		formatUsageTip(text) {
 			if (!text) return text;
 
-			// 匹配各种可能的使用提示格式并替换为标准的两行格式
+			// 检查是否已经包含"更多优惠"信息，避免重复添加
+			if (text.includes('更多优惠')) {
+				// 如果已经包含"更多优惠"，只需要确保使用提示格式正确
+				let formattedText = text;
+
+				// 只替换使用提示部分，不添加新的"更多优惠"信息
+				const simplePatterns = [
+					/点击复制按钮后\s+打开淘宝APP直接购买/g,
+					/点击复制按钮后打开淘宝APP直接购买/g,
+					/点击复制按钮后\s*\n\s*打开淘宝APP直接购买/g,
+					/点击复制按钮后\s+打开助手并粘贴发送/g,
+					/点击复制按钮后打开助手并粘贴发送/g,
+					/点击复制按钮后\s*\n\s*打开助手并粘贴发送/g
+				];
+
+				simplePatterns.forEach(pattern => {
+					formattedText = formattedText.replace(pattern, '点击复制按钮后\n打开助手并粘贴发送');
+				});
+
+				return formattedText;
+			}
+
+			// 如果不包含"更多优惠"，则添加完整的信息
 			const patterns = [
 				// 匹配旧的淘宝APP提示格式
 				/点击复制按钮后\s+打开淘宝APP直接购买/g,
@@ -1058,9 +1086,9 @@ export default {
 
 			let formattedText = text;
 
-			// 替换所有匹配的模式为标准的两行格式
+			// 替换所有匹配的模式为标准的格式（包含更多优惠信息）
 			patterns.forEach(pattern => {
-				formattedText = formattedText.replace(pattern, '点击复制按钮后\n打开助手并粘贴发送');
+				formattedText = formattedText.replace(pattern, '更多优惠\nhttps://s.click.taobao.com/geyPIIr\n点击复制按钮后\n打开助手并粘贴发送');
 			});
 
 			return formattedText;
