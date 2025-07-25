@@ -17,7 +17,10 @@
 			scroll-y
 			class="tui-scroll-content"
 			:style="{ height: scrollHeight + 'px', marginTop: height + 'px' }"
-			:scroll-top="scrollTop"
+			:enable-back-to-top="true"
+			:scroll-with-animation="false"
+			:enhanced="true"
+			:bounces="false"
 			@scroll="onScroll">
 
 			<!-- 商品图片轮播 -->
@@ -162,6 +165,7 @@ export default {
 			scrollHeight: 0,
 			scrollTop: 0,
 			bottomBarHeight: 88, // 底部操作栏高度（实际高度）
+			scrollTimer: null, // 滚动节流定时器
 
 			// 商品信息
 			productId: '',
@@ -205,6 +209,14 @@ export default {
 		this.getSystemInfo();
 		this.loadGoodsDetail();
 		this.loadKefuConfig();
+	},
+
+	onUnload() {
+		// 页面销毁时清理定时器，防止内存泄漏
+		if (this.scrollTimer) {
+			clearTimeout(this.scrollTimer);
+			this.scrollTimer = null;
+		}
 	},
 
 	computed: {
@@ -540,10 +552,21 @@ export default {
 		},
 
 		/**
-		 * 滚动事件处理
+		 * 滚动事件处理 - 添加节流优化，减少闪动
 		 */
 		onScroll(e) {
-			this.scrollTop = e.detail.scrollTop;
+			// 使用节流避免频繁更新导致的闪动
+			if (this.scrollTimer) {
+				clearTimeout(this.scrollTimer);
+			}
+
+			this.scrollTimer = setTimeout(() => {
+				// 只在必要时更新 scrollTop，避免不必要的重渲染
+				const newScrollTop = e.detail.scrollTop;
+				if (Math.abs(newScrollTop - this.scrollTop) > 5) {
+					this.scrollTop = newScrollTop;
+				}
+			}, 16); // 约60fps的更新频率
 		},
 
 
@@ -1195,6 +1218,11 @@ export default {
 	z-index: 1000;
 	background-color: #fff;
 	border-bottom: 1rpx solid #f0f0f0;
+	/* 添加硬件加速，防止滚动时闪动 */
+	transform: translateZ(0);
+	-webkit-transform: translateZ(0);
+	-webkit-backface-visibility: hidden;
+	backface-visibility: hidden;
 }
 
 .tui-header {
@@ -1238,6 +1266,16 @@ export default {
 	background: #fff;
 	overflow-y: auto;
 	-webkit-overflow-scrolling: touch;
+	/* 添加硬件加速，减少滚动闪动 */
+	transform: translateZ(0);
+	-webkit-transform: translateZ(0);
+	/* 优化滚动性能 */
+	will-change: scroll-position;
+	/* 防止滚动时的闪烁 */
+	-webkit-backface-visibility: hidden;
+	backface-visibility: hidden;
+	/* 平滑滚动 */
+	scroll-behavior: smooth;
 }
 
 /* 商品图片轮播 */
@@ -1455,6 +1493,11 @@ export default {
 	padding: 20rpx 30rpx;
 	padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
 	z-index: 999;
+	/* 添加硬件加速，防止滚动时闪动 */
+	transform: translateZ(0);
+	-webkit-transform: translateZ(0);
+	-webkit-backface-visibility: hidden;
+	backface-visibility: hidden;
 }
 
 .tui-bar-buttons {
